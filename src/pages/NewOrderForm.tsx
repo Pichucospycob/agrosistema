@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash, Calculator } from "lucide-react";
+import { Plus, Trash } from "lucide-react";
 import {
     Table,
     TableBody,
@@ -17,7 +17,7 @@ interface NewOrderFormProps {
     onCancel: () => void;
 }
 
-export function NewOrderForm({ onSuccess, onCancel }: NewOrderFormProps) {
+export function NewOrderForm({ onCancel }: NewOrderFormProps) {
     const [lots, setLots] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
 
