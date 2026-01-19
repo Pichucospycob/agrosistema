@@ -82,7 +82,7 @@ export default function OrderDetailsPage() {
             })));
 
             // Generate PDF
-            generateRemitoPDF(updatedOrder, updatedItems);
+            await generateRemitoPDF(updatedOrder, updatedItems);
 
             setActionSuccess("Remito emitido y stock descontado.");
             setTimeout(() => setActionSuccess(null), 3000);
@@ -115,7 +115,7 @@ export default function OrderDetailsPage() {
                 quantityReturned: i.quantityReturned?.toString() || "0"
             })));
 
-            generateRemitoPDF(updatedOrder, updatedItems);
+            await generateRemitoPDF(updatedOrder, updatedItems);
             setShowCloseConfirm(false);
             alert("Orden cerrada correctamente.");
         } catch (error) {
@@ -172,7 +172,7 @@ export default function OrderDetailsPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => generateWorkOrderPDF(order, items)}>
+                    <Button variant="outline" onClick={async () => await generateWorkOrderPDF(order, items)}>
                         <Printer className="mr-2 h-4 w-4" /> Imprimir Orden
                     </Button>
                 </div>
@@ -371,7 +371,7 @@ export default function OrderDetailsPage() {
                                 <Truck className="mr-2 h-4 w-4" /> Confirmar Salida
                             </Button>
                         ) : (
-                            <Button variant="outline" onClick={() => generateRemitoPDF(order, items)}>
+                            <Button variant="outline" onClick={async () => await generateRemitoPDF(order, items)}>
                                 <FileText className="mr-2 h-4 w-4" /> Reimprimir Remito
                             </Button>
                         )}

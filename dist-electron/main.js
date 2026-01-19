@@ -4900,8 +4900,7 @@ function createWindow() {
         {
           label: "Instrucciones de Uso",
           click: () => {
-            const { shell } = require$1("electron");
-            shell.openExternal("https://github.com");
+            win?.webContents.send("navigate-to", "/guia");
           }
         },
         { type: "separator" },
@@ -4934,7 +4933,6 @@ function createWindow() {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
-    win = null;
   }
 });
 app.on("activate", () => {
@@ -4967,6 +4965,10 @@ function setupIpcHandlers(db, save) {
     await db.delete(products).where(eq(products.id, id));
     save();
     return true;
+  });
+  ipcMain.handle("quit-app", () => {
+    save();
+    app.quit();
   });
   ipcMain.handle("get-lots", async () => {
     const result = await db.select().from(lots).orderBy(lots.name);

@@ -27,13 +27,13 @@ export default function Layout() {
         <div className="flex h-screen w-full bg-background">
             {/* Sidebar */}
             <aside className="w-64 bg-[#0F172A] flex flex-col z-20">
-                <div className="p-6 flex items-center gap-3 border-b border-white/10">
-                    <div className="h-8 w-8 bg-white/10 rounded flex items-center justify-center text-white">
-                        <Leaf size={18} />
+                <div className="p-6 flex flex-col items-center gap-4 border-b border-white/10">
+                    <div className="w-48 h-24 flex items-center justify-center overflow-hidden">
+                        <img src="/logo_maragu.png" alt="Logo Maragu" className="h-full w-full object-contain scale-110" />
                     </div>
-                    <div>
+                    <div className="text-center">
                         <h1 className="font-bold text-lg text-white tracking-tight leading-none">AGROSISTEMA</h1>
-                        <p className="text-[9px] uppercase tracking-widest text-slate-400 font-bold mt-1">Control de Gestión</p>
+                        <p className="text-[9px] uppercase tracking-widest text-slate-400 font-bold mt-2">Control de Gestión</p>
                     </div>
                 </div>
 
@@ -51,7 +51,14 @@ export default function Layout() {
 
                 <div className="p-4 border-t border-white/10">
                     <NavItem to="/config" icon={<Settings size={20} />} label="Parámetros Sistema" />
-                    <button className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-bold text-red-400 hover:bg-white/5 transition-all">
+                    <button
+                        onClick={() => {
+                            if (confirm("¿Estás seguro de que deseas salir del programa?")) {
+                                (window as any).db.quitApp();
+                            }
+                        }}
+                        className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-bold text-red-400 hover:bg-white/5 transition-all"
+                    >
                         <LogOut size={16} />
                         Cerrar Sesión
                     </button>

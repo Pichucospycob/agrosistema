@@ -1,7 +1,7 @@
 {
   "name": "agrosistema",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -12,6 +12,32 @@
     "postinstall": "electron-builder install-app-deps",
     "db:push": "npx drizzle-kit push && npm run postinstall",
     "db:studio": "npx drizzle-kit studio"
+  },
+  "build": {
+    "appId": "com.maragu.agrosistema",
+    "productName": "Agrosistema",
+    "directories": {
+      "output": "release"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "noxi-maragu",
+        "repo": "agrosistema"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/logo_maragu.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "installerIcon": "public/logo_maragu.png",
+      "uninstallerIcon": "public/logo_maragu.png",
+      "installerHeaderIcon": "public/logo_maragu.png"
+    }
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -25,6 +51,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "drizzle-orm": "^0.45.1",
+    "electron-updater": "^6.7.3",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",

@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, dialog } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -113,7 +114,6 @@ function createWindow() {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
-    win = null
   }
 })
 
@@ -140,6 +140,29 @@ app.whenReady().then(async () => {
 
     createWindow();
     setupIpcHandlers(db, save);
+
+    // --- Auto Updater ---
+    if (app.isPackaged) {
+      autoUpdater.checkForUpdatesAndNotify();
+
+      autoUpdater.on('update-available', () => {
+        console.log('Update available.');
+      });
+
+      autoUpdater.on('update-downloaded', (info) => {
+        dialog.showMessageBox({
+          type: 'info',
+          title: 'Actualización lista',
+          message: `Una nueva versión (${info.version}) ha sido descargada. ¿Deseas reiniciar la aplicación para instalarla ahora?`,
+          buttons: ['Instalar ahora', 'Más tarde']
+        }).then((result) => {
+          if (result.response === 0) {
+            save(); // Always save before update
+            autoUpdater.quitAndInstall();
+          }
+        });
+      });
+    }
   } catch (err) {
     console.error("Failed to initialize database:", err);
     app.quit();
@@ -162,6 +185,11 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     await db.delete(schema.products).where(eq(schema.products.id, id));
     save();
     return true;
+  });
+
+  ipcMain.handle('quit-app', () => {
+    save(); // Final safety save
+    app.quit();
   });
 
   // --- Lots ---

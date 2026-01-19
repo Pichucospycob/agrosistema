@@ -41,5 +41,6 @@ electron.contextBridge.exposeInMainWorld("db", {
   updateProduct: (data) => electron.ipcRenderer.invoke("update-product", data),
   updateLot: (data) => electron.ipcRenderer.invoke("update-lot", data),
   getEfficiencyReport: () => electron.ipcRenderer.invoke("get-efficiency-report"),
-  getCampaignCostReport: () => electron.ipcRenderer.invoke("get-campaign-cost-report")
+  getCampaignCostReport: () => electron.ipcRenderer.invoke("get-campaign-cost-report"),
+  quitApp: () => electron.ipcRenderer.invoke("quit-app")
 });

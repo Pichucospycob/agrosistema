@@ -2,6 +2,28 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 
+// Helper to load image from public folder
+const getLogoBase64 = (): Promise<string> => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            } else {
+                resolve("");
+            }
+        };
+        img.onerror = () => resolve("");
+        // Relative path to public folder in Vite/Electron
+        img.src = "/logo_maragu.png";
+    });
+};
+
 // Helper for formatting doses (4 decimals)
 const formatDose = (num: number | string) => {
     const val = typeof num === 'string' ? parseFloat(num) : num;
@@ -15,7 +37,6 @@ const formatQuantity = (num: number | string) => {
 };
 
 // Generic for others
-// Generic for others
 const formatNumber = (num: number) => num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Helper for 8-digit padding
@@ -23,11 +44,16 @@ const padNumber = (num: number | string, length = 8) => {
     return num.toString().padStart(length, '0');
 };
 
-export const generateWorkOrderPDF = (order: any, items: any[]) => {
+export const generateWorkOrderPDF = async (order: any, items: any[]) => {
     const doc = new jsPDF();
     const orderNumStr = padNumber(order.orderNumber || 0);
 
-    // -- Header --
+    // -- Logo --
+    const logoData = await getLogoBase64();
+    if (logoData) {
+        doc.addImage(logoData, 'PNG', 15, 10, 25, 18.75);
+    }
+
     doc.setFontSize(22);
     doc.text("ORDEN DE TRABAJO", 105, 20, { align: "center" });
 
@@ -37,9 +63,9 @@ export const generateWorkOrderPDF = (order: any, items: any[]) => {
     doc.text(`Campaña: ${order.campaign}`, 150, 40);
 
     doc.setFontSize(12);
-    doc.text("AGROSISTEMA", 15, 30);
+    doc.text("AGROSISTEMA", 15, 34);
     doc.setFontSize(8);
-    doc.text("GESTIÓN AGROPECUARIA", 15, 34);
+    doc.text("GESTIÓN AGROPECUARIA", 15, 38);
 
     // -- General Info --
     doc.setLineWidth(0.5);
@@ -134,19 +160,23 @@ export const generateWorkOrderPDF = (order: any, items: any[]) => {
     doc.text("__________________________           __________________________", 25, obsY + 40);
     doc.text("Firma Responsable                   Firma Contratista/Aplicador", 30, obsY + 45);
 
-    // Filename: OT-NUM-LOTE-FECHA.pdf (clean LOTE name from spaces/special chars)
     const cleanField = (order.field || 'SIN-LOTE').replace(/[^a-z0-9]/gi, '-').substring(0, 15);
     const dateStr = format(new Date(order.date), 'yyyyMMdd');
     doc.save(`OT-${orderNumStr}-${cleanField}-${dateStr}.pdf`);
 };
 
-export const generateRemitoPDF = (order: any, items: any[]) => {
+export const generateRemitoPDF = async (order: any, items: any[]) => {
     const doc = new jsPDF();
     const isDefinitive = order.status === 'CERRADA';
     const remitoNumStr = padNumber(order.remitoNumber || 0);
     const orderNumStr = padNumber(order.orderNumber || 0);
 
-    // -- Header --
+    // -- Logo --
+    const logoData = await getLogoBase64();
+    if (logoData) {
+        doc.addImage(logoData, 'PNG', 15, 10, 25, 18.75);
+    }
+
     doc.setFontSize(22);
     doc.text(isDefinitive ? "REMITO DEFINITIVO" : "REMITO PROVISIONAL", 105, 20, { align: "center" });
 
@@ -156,9 +186,9 @@ export const generateRemitoPDF = (order: any, items: any[]) => {
     doc.text(`Fecha Emisión: ${format(new Date(), 'dd/MM/yyyy')}`, 150, 35);
 
     doc.setFontSize(12);
-    doc.text("AGROSISTEMA", 15, 30);
+    doc.text("AGROSISTEMA", 15, 34);
     doc.setFontSize(8);
-    doc.text("GESTIÓN AGROPECUARIA", 15, 34);
+    doc.text("GESTIÓN AGROPECUARIA", 15, 38);
 
     doc.setLineWidth(0.5);
     doc.line(15, 45, 195, 45);
@@ -168,11 +198,11 @@ export const generateRemitoPDF = (order: any, items: any[]) => {
     doc.text(`Contratista: ${order.contractor}`, 15, 62);
 
     if (isDefinitive) {
-        doc.setTextColor(0, 100, 0); // Greener for definitive
+        doc.setTextColor(0, 100, 0);
         doc.text("ESTADO: CONSUMO FINAL REGISTRADO", 15, 70);
         doc.setTextColor(0, 0, 0);
     } else {
-        doc.setTextColor(200, 100, 0); // Orange for provincial
+        doc.setTextColor(200, 100, 0);
         doc.text("ESTADO: SALIDA DE DEPÓSITO (SUJETO A DEVOLUCIÓN)", 15, 70);
         doc.setTextColor(0, 0, 0);
     }
@@ -200,14 +230,12 @@ export const generateRemitoPDF = (order: any, items: any[]) => {
         styles: { fontSize: 9 }
     });
 
-    // -- Footer --
     const finalY = (doc as any).lastAutoTable.finalY + 20;
 
     doc.setFontSize(10);
     doc.text("__________________________           __________________________", 25, finalY);
     doc.text("Firma Salida Depósito                 Recibí Conforme", 30, finalY + 5);
 
-    // Filename: REMITO-[PROV/FINAL]-NUM-OT-NUM.pdf
     const typeTag = isDefinitive ? 'FINAL' : 'PROV';
     doc.save(`REMITO-${typeTag}-${remitoNumStr}-OT-${orderNumStr}.pdf`);
 };

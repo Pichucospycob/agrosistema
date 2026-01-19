@@ -44,4 +44,5 @@ contextBridge.exposeInMainWorld('db', {
     updateLot: (data: any) => ipcRenderer.invoke('update-lot', data),
     getEfficiencyReport: () => ipcRenderer.invoke('get-efficiency-report'),
     getCampaignCostReport: () => ipcRenderer.invoke('get-campaign-cost-report'),
+    quitApp: () => ipcRenderer.invoke('quit-app'),
 })
