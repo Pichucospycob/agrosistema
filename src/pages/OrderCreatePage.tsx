@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, Trash2, Plus, FileText, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function OrderCreatePage() {
     const navigate = useNavigate();
+    const { id } = useParams();
+    const isEditing = !!id;
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [products, setProducts] = useState<any[]>([]);
@@ -44,7 +46,49 @@ export default function OrderCreatePage() {
     useEffect(() => {
         window.db.getProducts().then(setProducts);
         window.db.getLots().then(setLots);
-    }, []);
+
+        if (isEditing) {
+            setLoading(true);
+            window.db.getOrderDetails(parseInt(id!))
+                .then(data => {
+                    const { items: fetchedItems, lots: fetchedLots, ...orderData } = data;
+                    setFormData({
+                        date: orderData.date,
+                        campaign: orderData.campaign,
+                        contractor: orderData.contractor,
+                        field: orderData.field || "",
+                        crop: orderData.crop || "",
+                        labor: orderData.labor || "Pulverización",
+                        implanted: !!orderData.implanted,
+                        totalSurface: orderData.totalSurface || 0,
+                        nozzleType: orderData.nozzleType || "",
+                        nozzleDescription: orderData.nozzleDescription || "",
+                        waterPerHa: orderData.waterPerHa || 0,
+                        pressure: orderData.pressure || 3.0,
+                        pressureUnit: orderData.pressureUnit || "Bares",
+                        windSpeed: orderData.windSpeed || 0,
+                        humidity: orderData.humidity || 0,
+                        instructions: orderData.instructions || "",
+                        observations: orderData.observations || ""
+                    });
+
+                    setSelectedLotIds(fetchedLots.map((l: any) => l.id.toString()));
+                    const surfaces: Record<string, string> = {};
+                    fetchedLots.forEach((l: any) => {
+                        surfaces[l.id.toString()] = l.appliedSurface.toString();
+                    });
+                    setLotAppliedSurfaces(surfaces);
+
+                    setItems(fetchedItems.map((i: any) => ({
+                        productId: i.productId.toString(),
+                        dose: i.dose.toString(),
+                        total: i.quantityTheoretical
+                    })));
+                })
+                .catch(err => setError("Error al cargar la orden: " + err.message))
+                .finally(() => setLoading(false));
+        }
+    }, [id, isEditing]);
 
     // Auto-calculate surface when lots change
     useEffect(() => {
@@ -108,7 +152,7 @@ export default function OrderCreatePage() {
             processedValue = value.replace(',', '.');
         }
 
-        // @ts-ignore
+        // @ts-ignore - index-based access on items
         newItems[index][field] = processedValue;
 
         // Auto-calc total if dose changed or surface changed
@@ -178,20 +222,43 @@ export default function OrderCreatePage() {
         setLoading(true);
         setError(null);
         try {
-            await window.db.createOrder({
-                ...formData,
-                items: items.map(i => ({
-                    productId: parseInt(i.productId),
-                    dose: parseFloat(i.dose || "0") || 0,
-                    total: i.total
-                })),
-                lotIds: selectedLotIds.map(id => parseInt(id)),
-                lotDetails: selectedLotIds.map(id => ({
-                    lotId: parseInt(id),
-                    appliedSurface: parseFloat(lotAppliedSurfaces[id] || "0") || 0
-                }))
-            });
-            navigate('/ordenes');
+            let result;
+            if (isEditing) {
+                result = await window.db.updateOrder({
+                    id: parseInt(id!),
+                    ...formData,
+                    items: items.map(i => ({
+                        productId: parseInt(i.productId),
+                        dose: parseFloat(i.dose || "0") || 0,
+                        total: i.total
+                    })),
+                    lotIds: selectedLotIds.map(id => parseInt(id)),
+                    lotDetails: selectedLotIds.map(id => ({
+                        lotId: parseInt(id),
+                        appliedSurface: parseFloat(lotAppliedSurfaces[id] || "0") || 0
+                    }))
+                });
+            } else {
+                result = await window.db.createOrder({
+                    ...formData,
+                    items: items.map(i => ({
+                        productId: parseInt(i.productId),
+                        dose: parseFloat(i.dose || "0") || 0,
+                        total: i.total
+                    })),
+                    lotIds: selectedLotIds.map(id => parseInt(id)),
+                    lotDetails: selectedLotIds.map(id => ({
+                        lotId: parseInt(id),
+                        appliedSurface: parseFloat(lotAppliedSurfaces[id] || "0") || 0
+                    }))
+                });
+            }
+
+            if (result && result.id) {
+                navigate(`/ordenes/${result.id}`);
+            } else {
+                navigate('/ordenes');
+            }
         } catch (err: any) {
             console.error(err);
             setError("Error al crear la orden: " + (err.message || err));
@@ -208,14 +275,14 @@ export default function OrderCreatePage() {
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Nueva Orden de Trabajo</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{isEditing ? "Editar Orden de Trabajo" : "Nueva Orden de Trabajo"}</h1>
                         <p className="text-slate-500 text-sm">Registro técnico y receta agronómica de labor</p>
                     </div>
                 </div>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={() => navigate('/ordenes')} className="border-slate-300 hover:bg-slate-100 font-medium">Cancelar</Button>
                     <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 text-white font-semibold px-6 shadow-sm">
-                        <Save className="mr-2 h-4 w-4" /> Guardar Orden
+                        <Save className="mr-2 h-4 w-4" /> {isEditing ? "Actualizar Orden" : "Guardar Orden"}
                     </Button>
                 </div>
             </div>
@@ -500,15 +567,24 @@ export default function OrderCreatePage() {
                                             </td>
                                         </tr>
                                     ))}
-                                    {items.length === 0 && (
-                                        <tr>
-                                            <td colSpan={4} className="py-12 text-center text-slate-400 italic text-sm">
-                                                Click en "Agregar Insumo" para empezar la receta.
-                                            </td>
-                                        </tr>
-                                    )}
                                 </tbody>
                             </table>
+                            <div className="p-6 bg-slate-50/50 border-t flex justify-end gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => navigate('/ordenes')}
+                                    className="border-slate-300 hover:bg-slate-100 font-medium px-6"
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    onClick={handleSubmit}
+                                    disabled={loading}
+                                    className="bg-primary hover:bg-primary/90 text-white font-semibold px-8 shadow-md"
+                                >
+                                    <Save className="mr-2 h-4 w-4" /> {isEditing ? "Actualizar Orden" : "Guardar Orden"}
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

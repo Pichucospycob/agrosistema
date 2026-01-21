@@ -20045,6 +20045,7 @@ const orders = sqliteTable("orders", {
   // Velocidad viento / Atmosferas
   humidity: real("humidity"),
   // Humedad (si aplica)
+  instructions: text("instructions"),
   observations: text("observations"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`)
 });
@@ -20136,6 +20137,7 @@ function runMigrations() {
     if (!checkColumn("orders", "implanted")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN implanted integer");
     if (!checkColumn("orders", "total_surface")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN total_surface real");
     if (!checkColumn("orders", "nozzle_description")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN nozzle_description text");
+    if (!checkColumn("orders", "instructions")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN instructions text");
     if (!checkColumn("orders", "pressure_unit")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN pressure_unit text");
     if (!checkColumn("orders", "remito_number")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN remito_number integer");
     if (!checkColumn("order_items", "quantity_delivered")) sqlDbInstance.run("ALTER TABLE order_items ADD COLUMN quantity_delivered real DEFAULT 0");
@@ -20400,6 +20402,55 @@ function setupIpcHandlers(db, save) {
       throw error2;
     }
   });
+  ipcMain.handle("update-order", async (event, { id, ...orderData }) => {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const [updatedOrder] = await tx.update(orders).set({
+          date: orderData.date,
+          campaign: orderData.campaign,
+          contractor: orderData.contractor,
+          field: orderData.field,
+          crop: orderData.crop,
+          labor: orderData.labor,
+          implanted: orderData.implanted,
+          totalSurface: orderData.totalSurface,
+          nozzleType: orderData.nozzleType,
+          nozzleDescription: orderData.nozzleDescription,
+          waterPerHa: orderData.waterPerHa,
+          pressure: orderData.pressure,
+          pressureUnit: orderData.pressureUnit,
+          windSpeed: orderData.windSpeed,
+          humidity: orderData.humidity,
+          instructions: orderData.instructions,
+          observations: orderData.observations
+        }).where(eq(orders.id, id)).returning();
+        await tx.delete(orderItems).where(eq(orderItems.orderId, id));
+        for (const item of orderData.items) {
+          await tx.insert(orderItems).values({
+            orderId: id,
+            productId: item.productId,
+            dose: item.dose,
+            quantityTheoretical: item.total,
+            quantityDelivered: item.total
+          });
+        }
+        await tx.delete(orderLots).where(eq(orderLots.orderId, id));
+        for (const lot of orderData.lotDetails) {
+          await tx.insert(orderLots).values({
+            orderId: id,
+            lotId: lot.lotId,
+            appliedSurface: lot.appliedSurface
+          });
+        }
+        return updatedOrder;
+      });
+      save();
+      return result;
+    } catch (error2) {
+      console.error("Error updating order:", error2);
+      throw error2;
+    }
+  });
   ipcMain.handle("get-order-details", async (event, orderId) => {
     const order = await db.select().from(orders).where(eq(orders.id, orderId)).get();
     if (!order) throw new Error("Order not found");
@@ -20597,6 +20648,18 @@ function setupIpcHandlers(db, save) {
       return { purchases, consumption };
     } catch (error2) {
       console.error(error2);
+      throw error2;
+    }
+  });
+  ipcMain.handle("truncate-orders", async () => {
+    try {
+      await db.delete(orderItems);
+      await db.delete(orderLots);
+      await db.delete(orders);
+      save();
+      return true;
+    } catch (error2) {
+      console.error("Error truncating orders:", error2);
       throw error2;
     }
   });

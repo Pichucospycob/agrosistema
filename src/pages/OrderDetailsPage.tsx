@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Printer, Truck, CheckCheck, FileText, Settings } from "lucide-react";
+import { ArrowLeft, Printer, Truck, CheckCheck, FileText, Settings, Pencil } from "lucide-react";
 import { generateWorkOrderPDF, generateRemitoPDF } from "@/lib/pdf-generator";
 import { format } from "date-fns";
 
@@ -172,6 +172,11 @@ export default function OrderDetailsPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
+                    {order.status === 'BORRADOR' && (
+                        <Button variant="outline" onClick={() => navigate(`/ordenes/editar/${order.id}`)} className="border-primary/40 text-primary hover:bg-primary/5 font-bold">
+                            <Pencil className="mr-2 h-4 w-4" /> Editar Orden
+                        </Button>
+                    )}
                     <Button variant="outline" onClick={async () => await generateWorkOrderPDF(order, items)}>
                         <Printer className="mr-2 h-4 w-4" /> Imprimir Orden
                     </Button>

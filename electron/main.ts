@@ -310,6 +310,65 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
+  ipcMain.handle('update-order', async (event, { id, ...orderData }) => {
+    try {
+      const result = await db.transaction(async (tx) => {
+        // 1. Update main order data
+        const [updatedOrder] = await tx.update(schema.orders)
+          .set({
+            date: orderData.date,
+            campaign: orderData.campaign,
+            contractor: orderData.contractor,
+            field: orderData.field,
+            crop: orderData.crop,
+            labor: orderData.labor,
+            implanted: orderData.implanted,
+            totalSurface: orderData.totalSurface,
+            nozzleType: orderData.nozzleType,
+            nozzleDescription: orderData.nozzleDescription,
+            waterPerHa: orderData.waterPerHa,
+            pressure: orderData.pressure,
+            pressureUnit: orderData.pressureUnit,
+            windSpeed: orderData.windSpeed,
+            humidity: orderData.humidity,
+            instructions: orderData.instructions,
+            observations: orderData.observations,
+          })
+          .where(eq(schema.orders.id, id))
+          .returning();
+
+        // 2. Refresh items (Delete old, insert new)
+        await tx.delete(schema.orderItems).where(eq(schema.orderItems.orderId, id));
+        for (const item of orderData.items) {
+          await tx.insert(schema.orderItems).values({
+            orderId: id,
+            productId: item.productId,
+            dose: item.dose,
+            quantityTheoretical: item.total,
+            quantityDelivered: item.total,
+          });
+        }
+
+        // 3. Refresh lots (Delete old, insert new)
+        await tx.delete(schema.orderLots).where(eq(schema.orderLots.orderId, id));
+        for (const lot of orderData.lotDetails) {
+          await tx.insert(schema.orderLots).values({
+            orderId: id,
+            lotId: lot.lotId,
+            appliedSurface: lot.appliedSurface,
+          });
+        }
+
+        return updatedOrder;
+      });
+      save();
+      return result;
+    } catch (error) {
+      console.error("Error updating order:", error);
+      throw error;
+    }
+  });
+
   ipcMain.handle('get-order-details', async (event, orderId) => {
     const order = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
     if (!order) throw new Error("Order not found");
@@ -590,6 +649,19 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
       return { purchases, consumption };
     } catch (error) {
       console.error(error); throw error;
+    }
+  });
+
+  ipcMain.handle('truncate-orders', async () => {
+    try {
+      await db.delete(schema.orderItems);
+      await db.delete(schema.orderLots);
+      await db.delete(schema.orders);
+      save();
+      return true;
+    } catch (error) {
+      console.error("Error truncating orders:", error);
+      throw error;
     }
   });
 }

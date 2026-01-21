@@ -56,6 +56,7 @@ export function runMigrations() {
         if (!checkColumn('orders', 'implanted')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN implanted integer");
         if (!checkColumn('orders', 'total_surface')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN total_surface real");
         if (!checkColumn('orders', 'nozzle_description')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN nozzle_description text");
+        if (!checkColumn('orders', 'instructions')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN instructions text");
         if (!checkColumn('orders', 'pressure_unit')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN pressure_unit text");
         if (!checkColumn('orders', 'remito_number')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN remito_number integer");
 

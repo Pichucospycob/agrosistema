@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Eye, FileText } from "lucide-react";
+import { Plus, Eye, FileText, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -106,7 +106,17 @@ export default function OrdersPage() {
                                     <TableCell>
                                         <BadgeStatus status={order.status} />
                                     </TableCell>
-                                    <TableCell className="text-right py-4 px-6">
+                                    <TableCell className="text-right py-4 px-6 flex justify-end gap-2">
+                                        {order.status === 'BORRADOR' && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => navigate(`/ordenes/editar/${order.id}`)}
+                                                className="h-8 rounded-md border-slate-200 text-slate-500 hover:text-primary hover:border-primary/40 font-bold text-[11px] transition-all px-2"
+                                            >
+                                                <Pencil className="h-3.5 w-3.5" />
+                                            </Button>
+                                        )}
                                         <Button
                                             variant="outline"
                                             size="sm"

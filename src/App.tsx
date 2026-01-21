@@ -22,6 +22,7 @@ function App() {
             <Route path="stock" element={<StockPage />} />
             <Route path="ordenes" element={<OrdersPage />} />
             <Route path="ordenes/nueva" element={<OrderCreatePage />} />
+            <Route path="ordenes/editar/:id" element={<OrderCreatePage />} />
             <Route path="ordenes/:id" element={<OrderDetailsPage />} />
             <Route path="lotes" element={<LotesPage />} />
             <Route path="ajustes" element={<AdjustmentPage />} />

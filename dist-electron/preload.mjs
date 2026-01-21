@@ -33,6 +33,7 @@ electron.contextBridge.exposeInMainWorld("db", {
   // Orders
   getOrders: () => electron.ipcRenderer.invoke("get-orders"),
   createOrder: (data) => electron.ipcRenderer.invoke("create-order", data),
+  updateOrder: (data) => electron.ipcRenderer.invoke("update-order", data),
   getOrderDetails: (id) => electron.ipcRenderer.invoke("get-order-details", id),
   emitRemito: (data) => electron.ipcRenderer.invoke("emit-remito", data),
   closeOrder: (data) => electron.ipcRenderer.invoke("close-order", data),

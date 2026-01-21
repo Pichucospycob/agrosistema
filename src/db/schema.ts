@@ -46,6 +46,7 @@ export const orders = sqliteTable('orders', {
     windSpeed: real('wind_speed'), // Velocidad viento / Atmosferas
     humidity: real('humidity'), // Humedad (si aplica)
 
+    instructions: text('instructions'),
     observations: text('observations'),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });

@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('db', {
     // Orders
     getOrders: () => ipcRenderer.invoke('get-orders'),
     createOrder: (data: any) => ipcRenderer.invoke('create-order', data),
+    updateOrder: (data: any) => ipcRenderer.invoke('update-order', data),
     getOrderDetails: (id: number) => ipcRenderer.invoke('get-order-details', id),
     emitRemito: (data: { orderId: number, items: any[] }) => ipcRenderer.invoke('emit-remito', data),
     closeOrder: (data: { orderId: number, items: any[] }) => ipcRenderer.invoke('close-order', data),

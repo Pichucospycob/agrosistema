@@ -18,6 +18,7 @@ interface Window {
         // Orders
         getOrders: () => Promise<any[]>
         createOrder: (data: any) => Promise<any>
+        updateOrder: (data: any) => Promise<any>
         getOrderDetails: (id: number) => Promise<any>
         emitRemito: (data: { orderId: number, items: any[] }) => Promise<boolean>
         closeOrder: (data: { orderId: number, items: any[] }) => Promise<boolean>
@@ -27,5 +28,6 @@ interface Window {
         updateLot: (data: { id: number, name?: string, surface?: number }) => Promise<boolean>
         getEfficiencyReport: () => Promise<any[]>
         getCampaignCostReport: () => Promise<{ purchases: any[], consumption: any[] }>
+        truncateOrders: () => Promise<boolean>
     }
 }

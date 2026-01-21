@@ -22,10 +22,10 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <p className="text-sm text-slate-600 leading-relaxed">
-                            Carga la **Nueva Orden de Trabajo (OT)** seleccionando los lotes y definiendo la receta (productos y dosis).
+                            Carga la **Nueva OT** con lotes, receta e **instrucciones técnicas**. Al guardar, el sistema te llevará **automáticamente** a los detalles.
                         </p>
                         <div className="text-[10px] font-bold text-primary uppercase flex items-center gap-1">
-                            Ir a Órdenes <ArrowRight size={10} />
+                            ¡Novedad! Ahora puedes editar borradores <ArrowRight size={10} />
                         </div>
                     </CardContent>
                 </Card>
@@ -42,7 +42,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <p className="text-sm text-slate-600 leading-relaxed">
-                            Una vez creada, abre los detalles de la orden y emite el **Remito de Salida**. Esto descontará automáticamente el stock del galpón.
+                            Al guardar la OT, verás los detalles. Allí podrás emitir el **Remito de Salida** para descontar el stock del galpón automáticamente.
                         </p>
                         <div className="text-[10px] font-bold text-blue-600 uppercase flex items-center gap-1 italic">
                             Salida de Depósito
