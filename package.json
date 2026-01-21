@@ -1,7 +1,7 @@
 {
   "name": "agrosistema",
   "private": true,
-  "version": "1.0.4",
+  "version": "1.0.5",
   "repository": {
     "type": "git",
     "url": "https://github.com/Pichucospycob/agrosistema.git"
@@ -32,7 +32,10 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/logo_maragu.png"
+      "icon": "public/logo_maragu.png",
+      "publish": [
+        "github"
+      ]
     },
     "nsis": {
       "oneClick": false,
