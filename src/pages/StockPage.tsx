@@ -79,14 +79,17 @@ export default function StockPage() {
         setOpen(true);
     }
 
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+    const [showDeleteError, setShowDeleteError] = useState(false);
+
     async function handleDelete(id: number) {
-        if (!confirm("¿Seguro que deseas eliminar este producto? Se perderá el historial de movimientos.")) return;
         try {
             await window.db.deleteProduct(id);
             loadProducts();
+            setShowDeleteConfirm(null);
         } catch (error: any) {
             console.error("Error deleting product:", error);
-            alert("Error al eliminar el producto.");
+            setShowDeleteError(true);
         }
     }
 
@@ -230,7 +233,7 @@ export default function StockPage() {
                                     <TableCell className="text-slate-500 text-xs font-medium italic">{p.presentation}</TableCell>
                                     <TableCell className="text-right py-4">
                                         <div className="text-lg font-bold text-slate-900 tracking-tighter">
-                                            {p.currentStock?.toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                            {p.currentStock?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             <span className="text-[9px] font-bold text-slate-400 ml-1.5 uppercase">Uts</span>
                                         </div>
                                     </TableCell>
@@ -239,7 +242,7 @@ export default function StockPage() {
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(p)} className="h-7 w-7 text-slate-400 hover:text-primary transition-colors">
                                                 <Edit2 className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} className="h-7 w-7 text-slate-400 hover:text-red-600 transition-colors">
+                                            <Button variant="ghost" size="icon" onClick={() => setShowDeleteConfirm(p.id)} className="h-7 w-7 text-slate-400 hover:text-red-600 transition-colors">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -250,6 +253,49 @@ export default function StockPage() {
                     </TableBody>
                 </Table>
             </Card>
+
+            <Dialog open={!!showDeleteConfirm} onOpenChange={(val) => !val && setShowDeleteConfirm(null)}>
+                <DialogContent className="max-w-md border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-red-600 h-1.5 w-full" />
+                    <div className="p-6 space-y-4">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold text-slate-900 uppercase tracking-tight">Eliminar Insumo</DialogTitle>
+                            <DialogDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+                                ¿Estás seguro de que deseas eliminar este producto?
+                                <span className="block mt-2 font-bold text-red-600 uppercase text-[10px] tracking-widest">⚠️ Se perderá el historial de movimientos relacionado.</span>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0 sm:justify-between pt-2">
+                            <Button variant="ghost" onClick={() => setShowDeleteConfirm(null)} className="text-slate-500 font-bold text-[11px] uppercase tracking-widest">
+                                CANCELAR
+                            </Button>
+                            <Button
+                                onClick={() => showDeleteConfirm && handleDelete(showDeleteConfirm)}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 shadow-md h-10"
+                            >
+                                ELIMINAR PERMANENTEMENTE
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showDeleteError} onOpenChange={setShowDeleteError}>
+                <DialogContent className="max-w-sm border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-orange-500 h-1.5 w-full" />
+                    <div className="p-6 space-y-4 text-center">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold text-slate-900 uppercase">Error</DialogTitle>
+                            <DialogDescription className="text-sm font-medium text-slate-500">
+                                No se pudo eliminar el producto. Asegúrese de que no tenga movimientos o dependencias activas.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Button onClick={() => setShowDeleteError(false)} className="w-full bg-slate-900 text-white font-bold h-10">
+                            ENTENDIDO
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

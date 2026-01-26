@@ -20,7 +20,7 @@ const getLogoBase64 = (): Promise<string> => {
         };
         img.onerror = () => resolve("");
         // Relative path to public folder in Vite/Electron
-        img.src = "/logo_maragu.png";
+        img.src = "/logo_maragu.ico";
     });
 };
 
@@ -30,10 +30,10 @@ const formatDose = (num: number | string) => {
     return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 };
 
-// Helper for formatting quantities (3 decimals)
+// Helper for formatting quantities (redondeado a 2 decimales)
 const formatQuantity = (num: number | string) => {
     const val = typeof num === 'string' ? parseFloat(num) : num;
-    return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+    return val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
 // Generic for others
@@ -238,4 +238,93 @@ export const generateRemitoPDF = async (order: any, items: any[]) => {
 
     const typeTag = isDefinitive ? 'FINAL' : 'PROV';
     doc.save(`REMITO-${typeTag}-${remitoNumStr}-OT-${orderNumStr}.pdf`);
+};
+
+export const generateConsolidatedRemitoPDF = async (remito: any, items: any[]) => {
+    const doc = new jsPDF();
+    const isDefinitive = remito.status === 'CERRADO';
+    const remitoNumStr = padNumber(remito.remitoNumber || 0);
+
+    // -- Logo --
+    const logoData = await getLogoBase64();
+    if (logoData) {
+        doc.addImage(logoData, 'PNG', 15, 10, 25, 18.75);
+    }
+
+    doc.setFontSize(22);
+    doc.text(isDefinitive ? "REMITO DEFINITIVO" : "REMITO PROVISIONAL", 105, 20, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.text(`N° Remito: ${remitoNumStr}`, 150, 25);
+    doc.text(`Fecha Emisión: ${format(new Date(remito.date), 'dd/MM/yyyy')}`, 150, 30);
+    doc.text("CONSOLIDADO", 150, 35);
+
+    doc.setFontSize(12);
+    doc.text("AGROSISTEMA", 15, 34);
+    doc.setFontSize(8);
+    doc.text("GESTIÓN AGROPECUARIA", 15, 38);
+
+    doc.setLineWidth(0.5);
+    doc.line(15, 45, 195, 45);
+
+    doc.setFontSize(11);
+    doc.text(`Contratista: ${remito.contractor}`, 15, 55);
+
+    const ordersList = remito.orders?.map((o: any) => `#${padNumber(o.orderNumber, 6)}`).join(', ') || '-';
+    doc.setFontSize(9);
+    doc.text(`Órdenes Vinculadas: ${ordersList}`, 15, 62);
+
+    if (isDefinitive) {
+        doc.setTextColor(0, 100, 0);
+        doc.text("ESTADO: CONSUMO FINAL REGISTRADO", 15, 69);
+    } else {
+        doc.setTextColor(200, 100, 0);
+        doc.text("ESTADO: SALIDA DE DEPÓSITO (CONSOLIDADO)", 15, 69);
+    }
+    doc.setTextColor(0, 0, 0);
+
+    // -- Table --
+    autoTable(doc, {
+        startY: 75,
+        head: isDefinitive
+            ? [['Producto', 'Objetivo (L)', 'Entregado (L)', 'Dev. REAL (L)', 'Consumo REAL']]
+            : [['Producto', 'Objetivo (L)', 'Entregado (L)', 'Dev. Teórica', 'Dev. REAL (Cargar)']],
+        body: items.map(item => {
+            const theoretical = item.quantityTheoretical || 0;
+            const delivered = item.quantityDelivered || 0;
+            const returned = item.quantityReturned || 0;
+            const real = item.quantityReal || (delivered - returned);
+            const expectedReturn = delivered - theoretical;
+
+            if (isDefinitive) {
+                return [
+                    `${item.productName} (${item.productPresentation || ''})`,
+                    formatQuantity(theoretical),
+                    formatQuantity(delivered),
+                    formatQuantity(returned),
+                    formatQuantity(real)
+                ];
+            } else {
+                return [
+                    `${item.productName} (${item.productPresentation || ''})`,
+                    formatQuantity(theoretical),
+                    formatQuantity(delivered),
+                    expectedReturn > 0 ? formatQuantity(expectedReturn) : "-",
+                    "[        ]" // Espacio en blanco para carga manual
+                ];
+            }
+        }),
+        theme: 'striped',
+        headStyles: { fillColor: isDefinitive ? [20, 100, 20] : [40, 40, 40] },
+        styles: { fontSize: 9 }
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 20;
+
+    doc.setFontSize(10);
+    doc.text("__________________________           __________________________", 25, finalY);
+    doc.text("Firma Salida Depósito                 Recibí Conforme", 30, finalY + 5);
+
+    const typeTag = isDefinitive ? 'FINAL' : 'PROV';
+    doc.save(`REMITO-CONSOLIDADO-${typeTag}-${remitoNumStr}.pdf`);
 };

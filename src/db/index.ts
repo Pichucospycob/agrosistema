@@ -60,6 +60,44 @@ export function runMigrations() {
         if (!checkColumn('orders', 'pressure_unit')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN pressure_unit text");
         if (!checkColumn('orders', 'remito_number')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN remito_number integer");
 
+        // --- New Remitos Migrations ---
+        sqlDbInstance.run(`
+            CREATE TABLE IF NOT EXISTS remitos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                remito_number INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                contractor TEXT,
+                observations TEXT,
+                status TEXT NOT NULL DEFAULT 'EMITIDO',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        if (!checkColumn('orders', 'remito_id')) {
+            sqlDbInstance.run("ALTER TABLE orders ADD COLUMN remito_id INTEGER REFERENCES remitos(id)");
+        }
+
+        // --- Supplier Remitos Migrations ---
+        sqlDbInstance.run(`
+            CREATE TABLE IF NOT EXISTS supplier_remitos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                remito_number TEXT NOT NULL,
+                date TEXT NOT NULL,
+                supplier TEXT NOT NULL,
+                observations TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        sqlDbInstance.run(`
+            CREATE TABLE IF NOT EXISTS supplier_remito_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                remito_id INTEGER NOT NULL REFERENCES supplier_remitos(id),
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                quantity REAL NOT NULL
+            )
+        `);
+
         if (!checkColumn('order_items', 'quantity_delivered')) sqlDbInstance.run("ALTER TABLE order_items ADD COLUMN quantity_delivered real DEFAULT 0");
         if (!checkColumn('order_items', 'quantity_returned')) sqlDbInstance.run("ALTER TABLE order_items ADD COLUMN quantity_returned real DEFAULT 0");
         if (!checkColumn('order_items', 'quantity_real')) sqlDbInstance.run("ALTER TABLE order_items ADD COLUMN quantity_real real DEFAULT 0");

@@ -35,7 +35,7 @@ export default function OrderCreatePage() {
         pressureUnit: "Bares",
         windSpeed: 0,
         humidity: 0,
-        instructions: "Triple lavado de envases, respetando orden de carga.",
+        instructions: "ATENCIÓN: NO ALTERAR EL ORDEN DE LOS PRODUCTOS",
         observations: ""
     });
 
@@ -109,7 +109,7 @@ export default function OrderCreatePage() {
             totalSurface: parseFloat(totalSurface.toFixed(2))
         }));
 
-    }, [selectedLotIds, lots]);
+    }, [selectedLotIds, lots, lotAppliedSurfaces]);
 
 
     const toggleLot = (lotId: string) => {
@@ -159,7 +159,7 @@ export default function OrderCreatePage() {
         if (field === 'dose' || field === 'productId') {
             const doseNum = parseFloat(newItems[index].dose || "0") || 0;
             const calculatedTotal = doseNum * formData.totalSurface;
-            newItems[index].total = parseFloat(calculatedTotal.toFixed(3));
+            newItems[index].total = parseFloat(calculatedTotal.toFixed(2));
         }
         setItems(newItems);
     };

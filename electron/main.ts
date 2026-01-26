@@ -9,7 +9,6 @@ import { eq, sql } from 'drizzle-orm';
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const __filename = fileURLToPath(import.meta.url)
 
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(process.env.DIST, '../public')
@@ -22,7 +21,7 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(process.env.VITE_PUBLIC || '', 'electron-vite.svg'),
+    icon: path.join(process.env.VITE_PUBLIC || '', 'logo_maragu.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
@@ -175,13 +174,13 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     return result;
   });
 
-  ipcMain.handle('create-product', async (event, product) => {
+  ipcMain.handle('create-product', async (_event, product) => {
     const result = await db.insert(schema.products).values(product).returning();
     save();
     return result[0];
   });
 
-  ipcMain.handle('delete-product', async (event, id) => {
+  ipcMain.handle('delete-product', async (_event, id) => {
     await db.delete(schema.products).where(eq(schema.products.id, id));
     save();
     return true;
@@ -198,20 +197,20 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     return result;
   });
 
-  ipcMain.handle('create-lot', async (event, lot) => {
+  ipcMain.handle('create-lot', async (_event, lot) => {
     const result = await db.insert(schema.lots).values(lot).returning();
     save();
     return result[0];
   });
 
-  ipcMain.handle('delete-lot', async (event, id) => {
+  ipcMain.handle('delete-lot', async (_event, id) => {
     await db.delete(schema.lots).where(eq(schema.lots.id, id));
     save();
     return true;
   });
 
   // --- Stock Movements ---
-  ipcMain.handle('add-stock-movement', async (event, { productId, quantity, description, type }) => {
+  ipcMain.handle('add-stock-movement', async (_event, { productId, quantity, description, type }) => {
     try {
       const result = await db.transaction(async (tx) => {
         await tx.insert(schema.stockMovements).values({
@@ -242,7 +241,19 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
   // --- Orders ---
   ipcMain.handle('get-orders', async () => {
     try {
-      const result = await db.select().from(schema.orders).orderBy(schema.orders.date);
+      const orders = await db.select().from(schema.orders).orderBy(schema.orders.date);
+      const result = [];
+      for (const order of orders) {
+        const orderLots = await db.select({
+          name: schema.lots.name
+        })
+          .from(schema.orderLots)
+          .leftJoin(schema.lots, eq(schema.orderLots.lotId, schema.lots.id))
+          .where(eq(schema.orderLots.orderId, order.id));
+
+        const lotNames = orderLots.map(l => l.name).join(', ');
+        result.push({ ...order, lotNames });
+      }
       return result;
     } catch (error) {
       console.error(error);
@@ -250,7 +261,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
-  ipcMain.handle('create-order', async (event, orderData) => {
+  ipcMain.handle('create-order', async (_event, orderData) => {
     try {
       const result = await db.transaction(async (tx) => {
         // Calculate next order number
@@ -310,7 +321,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
-  ipcMain.handle('update-order', async (event, { id, ...orderData }) => {
+  ipcMain.handle('update-order', async (_event, { id, ...orderData }) => {
     try {
       const result = await db.transaction(async (tx) => {
         // 1. Update main order data
@@ -369,7 +380,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
-  ipcMain.handle('get-order-details', async (event, orderId) => {
+  ipcMain.handle('get-order-details', async (_event, orderId) => {
     const order = await db.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
     if (!order) throw new Error("Order not found");
 
@@ -400,7 +411,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     return { ...order, items, lots };
   });
 
-  ipcMain.handle('emit-remito', async (event, { orderId, items }) => {
+  ipcMain.handle('emit-remito', async (_event, { orderId, items }) => {
     // items: { id, productId, quantityDelivered }[]
     await db.transaction(async (tx) => {
       // 1. Assign Remito Number if not already present
@@ -461,7 +472,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     return true;
   });
 
-  ipcMain.handle('close-order', async (event, { orderId, items }) => {
+  ipcMain.handle('close-order', async (_event, { orderId, items }) => {
     // items: { id, productId, quantityReturned }
     await db.transaction(async (tx) => {
       await tx.update(schema.orders).set({ status: 'CERRADA' }).where(eq(schema.orders.id, orderId));
@@ -542,7 +553,8 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
         productId: schema.orderItems.productId,
         productName: schema.products.name,
         quantityReal: schema.orderItems.quantityReal,
-        campaign: schema.orders.campaign
+        campaign: schema.orders.campaign,
+        date: schema.orders.date
       })
         .from(schema.orderItems)
         .leftJoin(schema.orders, eq(schema.orderItems.orderId, schema.orders.id))
@@ -574,7 +586,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
-  ipcMain.handle('update-product', async (event, data: { id: number, name?: string, activeIngredient?: string, presentation?: string }) => {
+  ipcMain.handle('update-product', async (_event, data: { id: number, name?: string, activeIngredient?: string, presentation?: string }) => {
     try {
       await db.update(schema.products)
         .set({
@@ -590,7 +602,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
-  ipcMain.handle('update-lot', async (event, data: { id: number, name?: string, surface?: number }) => {
+  ipcMain.handle('update-lot', async (_event, data: { id: number, name?: string, surface?: number }) => {
     try {
       await db.update(schema.lots)
         .set({
@@ -605,6 +617,282 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
+  // --- Remitos Consolidados ---
+  ipcMain.handle('get-remitos', async () => {
+    try {
+      return await db.select().from(schema.remitos).orderBy(sql`${schema.remitos.remitoNumber} DESC`);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('get-aggregated-items-for-orders', async (_event, orderIds: number[]) => {
+    try {
+      const rawItems = await db.select({
+        productId: schema.orderItems.productId,
+        productName: schema.products.name,
+        productPresentation: schema.products.presentation,
+        quantityTheoretical: schema.orderItems.quantityTheoretical,
+      })
+        .from(schema.orderItems)
+        .leftJoin(schema.products, eq(schema.orderItems.productId, schema.products.id))
+        .where(sql`${schema.orderItems.orderId} IN (${sql.join(orderIds, sql`, `)})`);
+
+      const aggregatedMap: Map<number, any> = new Map();
+      rawItems.forEach(item => {
+        if (!aggregatedMap.has(item.productId)) {
+          aggregatedMap.set(item.productId, { ...item, quantityTheoretical: 0 });
+        }
+        const existing = aggregatedMap.get(item.productId);
+        existing.quantityTheoretical += (item.quantityTheoretical || 0);
+      });
+
+      return Array.from(aggregatedMap.values());
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('create-consolidated-remito', async (_event, { orderIds, date, contractor, observations, deliveredItems }) => {
+    // deliveredItems: { productId: number, quantityDelivered: number }[]
+    try {
+      const result = await db.transaction(async (tx) => {
+        // 1. Get next remito number
+        const lastRemito = await tx.select().from(schema.remitos).orderBy(sql`${schema.remitos.remitoNumber} DESC`).limit(1).get();
+        const nextRemitoNumber = (lastRemito?.remitoNumber || 0) + 1;
+
+        // 2. Create entry in remitos
+        const [newRemito] = await tx.insert(schema.remitos).values({
+          remitoNumber: nextRemitoNumber,
+          date,
+          contractor,
+          observations,
+          status: 'EMITIDO'
+        }).returning();
+
+        // 3. Link orders
+        await tx.update(schema.orders)
+          .set({
+            status: 'EMITIDA',
+            remitoId: newRemito.id,
+            remitoNumber: nextRemitoNumber
+          })
+          .where(sql`${schema.orders.id} IN (${sql.join(orderIds, sql`, `)})`);
+
+        // 4. Distribute delivered quantities and generate stock movements
+        for (const dItem of deliveredItems) {
+          let remainingToDistribute = dItem.quantityDelivered;
+
+          // Find all orderItems for this product across these orders
+          const items = await tx.select().from(schema.orderItems)
+            .where(sql`${schema.orderItems.orderId} IN (${sql.join(orderIds, sql`, `)}) AND ${schema.orderItems.productId} = ${dItem.productId}`);
+
+          for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            let assign = 0;
+
+            if (i === items.length - 1) {
+              // Last one gets all remaining (surplus included)
+              assign = remainingToDistribute;
+            } else {
+              // Others get exactly what they asked for (if possible)
+              assign = Math.min(remainingToDistribute, item.quantityTheoretical);
+            }
+
+            await tx.update(schema.orderItems)
+              .set({ quantityDelivered: assign })
+              .where(eq(schema.orderItems.id, item.id));
+
+            remainingToDistribute -= assign;
+          }
+
+          // Stock Movement for total product delivery
+          await tx.insert(schema.stockMovements).values({
+            productId: dItem.productId,
+            quantity: -dItem.quantityDelivered,
+            type: 'SALIDA_REMITO',
+            description: `Remito Consolidado #${nextRemitoNumber}`
+          });
+
+          // Update product stock
+          const product = await tx.select().from(schema.products).where(eq(schema.products.id, dItem.productId)).get();
+          if (product) {
+            await tx.update(schema.products)
+              .set({ currentStock: (product.currentStock || 0) - dItem.quantityDelivered })
+              .where(eq(schema.products.id, dItem.productId));
+          }
+        }
+        return newRemito;
+      });
+      save();
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('get-remito-details', async (_event, remitoId) => {
+    try {
+      const remito = await db.select().from(schema.remitos).where(eq(schema.remitos.id, remitoId)).get();
+      if (!remito) throw new Error("Remito not found");
+
+      const orders = await db.select().from(schema.orders).where(eq(schema.orders.remitoId, remitoId));
+
+      const rawItems = await db.select({
+        productId: schema.orderItems.productId,
+        productName: schema.products.name,
+        productPresentation: schema.products.presentation,
+        quantityTheoretical: schema.orderItems.quantityTheoretical,
+        quantityDelivered: schema.orderItems.quantityDelivered,
+        quantityReturned: schema.orderItems.quantityReturned,
+        quantityReal: schema.orderItems.quantityReal,
+      })
+        .from(schema.orderItems)
+        .innerJoin(schema.orders, eq(schema.orderItems.orderId, schema.orders.id))
+        .leftJoin(schema.products, eq(schema.orderItems.productId, schema.products.id))
+        .where(eq(schema.orders.remitoId, remitoId));
+
+      const aggregatedMap: Map<number, any> = new Map();
+      rawItems.forEach(item => {
+        if (!aggregatedMap.has(item.productId)) {
+          aggregatedMap.set(item.productId, { ...item });
+        } else {
+          const existing = aggregatedMap.get(item.productId);
+          existing.quantityTheoretical += (item.quantityTheoretical || 0);
+          existing.quantityDelivered += (item.quantityDelivered || 0);
+          existing.quantityReturned += (item.quantityReturned || 0);
+          existing.quantityReal += (item.quantityReal || 0);
+        }
+      });
+
+      return {
+        ...remito,
+        orders,
+        items: Array.from(aggregatedMap.values())
+      };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('close-consolidated-remito', async (_event, { remitoId, itemsReturn, itemsDelivered }) => {
+    try {
+      const result = await db.transaction(async (tx) => {
+        await tx.update(schema.remitos).set({ status: 'CERRADO' }).where(eq(schema.remitos.id, remitoId));
+        const remito = await tx.select().from(schema.remitos).where(eq(schema.remitos.id, remitoId)).get();
+
+        await tx.update(schema.orders).set({ status: 'CERRADA' }).where(eq(schema.orders.remitoId, remitoId));
+        const linkedOrders = await tx.select().from(schema.orders).where(eq(schema.orders.remitoId, remitoId));
+
+        // 1. Handle Delivery Corrections (Optional but useful for UX)
+        if (itemsDelivered) {
+          for (const dItem of itemsDelivered) {
+            // Find current total delivered for this product in this remito
+            const currentItems = await tx.select().from(schema.orderItems)
+              .where(sql`${schema.orderItems.orderId} IN (${sql.join(linkedOrders.map(o => o.id), sql`, `)}) AND ${schema.orderItems.productId} = ${dItem.productId}`);
+
+            const currentTotal = currentItems.reduce((acc, it) => acc + (it.quantityDelivered || 0), 0);
+            const diff = dItem.quantityDelivered - currentTotal;
+
+            if (Math.abs(diff) > 0.0001) {
+              // Update Stock
+              const product = await tx.select().from(schema.products).where(eq(schema.products.id, dItem.productId)).get();
+              if (product) {
+                await tx.update(schema.products)
+                  .set({ currentStock: (product.currentStock || 0) - diff })
+                  .where(eq(schema.products.id, dItem.productId));
+              }
+
+              // Update Stock Movement (Adjustment)
+              await tx.insert(schema.stockMovements).values({
+                productId: dItem.productId,
+                quantity: -diff,
+                type: 'AJUSTE',
+                description: `Corrección entrega Remito #${remito?.remitoNumber}`
+              });
+
+              // Redistribute dItem.quantityDelivered among orderItems
+              let remaining = dItem.quantityDelivered;
+              for (let i = 0; i < currentItems.length; i++) {
+                const item = currentItems[i];
+                let assign = 0;
+                if (i === currentItems.length - 1) assign = remaining;
+                else assign = Math.min(remaining, item.quantityTheoretical);
+
+                await tx.update(schema.orderItems).set({ quantityDelivered: assign }).where(eq(schema.orderItems.id, item.id));
+                remaining -= assign;
+              }
+            }
+          }
+        }
+
+        // 2. Handle Returns (Normal Closure)
+        for (const itemRet of itemsReturn) {
+          if (itemRet.quantityReturned > 0) {
+            // Re-fetch linked orders items to have latest quantityDelivered (after correction)
+            await tx.insert(schema.stockMovements).values({
+              productId: itemRet.productId,
+              quantity: itemRet.quantityReturned,
+              type: 'RETORNO_SOBRANTE',
+              description: `Retorno Consolidado #${remito?.remitoNumber}`
+            });
+
+            const product = await tx.select().from(schema.products).where(eq(schema.products.id, itemRet.productId)).get();
+            if (product) {
+              await tx.update(schema.products)
+                .set({ currentStock: (product.currentStock || 0) + itemRet.quantityReturned })
+                .where(eq(schema.products.id, itemRet.productId));
+            }
+
+            let remainingToReturn = itemRet.quantityReturned;
+            for (const order of linkedOrders) {
+              const orderItem = await tx.select().from(schema.orderItems)
+                .where(sql`${schema.orderItems.orderId} = ${order.id} AND ${schema.orderItems.productId} = ${itemRet.productId}`)
+                .get();
+
+              if (orderItem) {
+                // Re-fetch updated quantity (important!)
+                const currentDelivered = (await tx.select().from(schema.orderItems).where(eq(schema.orderItems.id, orderItem.id)).get())?.quantityDelivered || 0;
+
+                const returnForThisOrder = Math.min(remainingToReturn, currentDelivered);
+                const quantityReturned = itemRet.quantityReturned > 0 ? returnForThisOrder : 0;
+
+                await tx.update(schema.orderItems)
+                  .set({
+                    quantityReturned: quantityReturned,
+                    quantityReal: currentDelivered - quantityReturned
+                  })
+                  .where(eq(schema.orderItems.id, orderItem.id));
+
+                remainingToReturn -= returnForThisOrder;
+              }
+            }
+          } else {
+            // If return is 0, still calculate quantityReal = quantityDelivered
+            for (const order of linkedOrders) {
+              const orderItem = await tx.select().from(schema.orderItems)
+                .where(sql`${schema.orderItems.orderId} = ${order.id} AND ${schema.orderItems.productId} = ${itemRet.productId}`)
+                .get();
+              if (orderItem) {
+                await tx.update(schema.orderItems).set({ quantityReal: orderItem.quantityDelivered }).where(eq(schema.orderItems.id, orderItem.id));
+              }
+            }
+          }
+        }
+        return true;
+      });
+      save();
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
   ipcMain.handle('get-efficiency-report', async () => {
     try {
       const result = await db.select({
@@ -613,7 +901,8 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
         productName: schema.products.name,
         theoretical: schema.orderItems.quantityTheoretical,
         real: schema.orderItems.quantityReal,
-        campaign: schema.orders.campaign
+        campaign: schema.orders.campaign,
+        date: schema.orders.date
       })
         .from(schema.orderItems)
         .leftJoin(schema.orders, eq(schema.orderItems.orderId, schema.orders.id))
@@ -664,4 +953,95 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
       throw error;
     }
   });
+
+  // --- Supplier Remitos ---
+  ipcMain.handle('get-supplier-remitos', async () => {
+    try {
+      const result = await db.select().from(schema.supplierRemitos).orderBy(sql`${schema.supplierRemitos.createdAt} DESC`);
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('create-supplier-remito', async (_event, data) => {
+    // data: { remitoNumber, date, supplier, observations, items: { productId, quantity }[] }
+    try {
+      const result = await db.transaction(async (tx) => {
+        const [newRemito] = await tx.insert(schema.supplierRemitos).values({
+          remitoNumber: data.remitoNumber,
+          date: data.date,
+          supplier: data.supplier,
+          observations: data.observations
+        }).returning();
+
+        for (const item of data.items) {
+          await tx.insert(schema.supplierRemitoItems).values({
+            remitoId: newRemito.id,
+            productId: item.productId,
+            quantity: item.quantity
+          });
+
+          // Stock Movement
+          await tx.insert(schema.stockMovements).values({
+            productId: item.productId,
+            quantity: item.quantity,
+            type: 'COMPRA',
+            description: `Remito Proveedor #${data.remitoNumber} (${data.supplier})`
+          });
+
+          // Update Product Stock
+          const product = await tx.select().from(schema.products).where(eq(schema.products.id, item.productId)).get();
+          if (product) {
+            await tx.update(schema.products)
+              .set({ currentStock: (product.currentStock || 0) + item.quantity })
+              .where(eq(schema.products.id, item.productId));
+          }
+        }
+        return newRemito;
+      });
+      save();
+      return result;
+    } catch (error) {
+      console.error("Error creating supplier remito:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('get-supplier-remito-details', async (_event, remitoId) => {
+    try {
+      const remito = await db.select().from(schema.supplierRemitos).where(eq(schema.supplierRemitos.id, remitoId)).get();
+      if (!remito) throw new Error("Remito not found");
+
+      const items = await db.select({
+        productId: schema.supplierRemitoItems.productId,
+        productName: schema.products.name,
+        productPresentation: schema.products.presentation,
+        quantity: schema.supplierRemitoItems.quantity,
+      })
+        .from(schema.supplierRemitoItems)
+        .leftJoin(schema.products, eq(schema.supplierRemitoItems.productId, schema.products.id))
+        .where(eq(schema.supplierRemitoItems.remitoId, remitoId));
+
+      return { ...remito, items };
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('get-product-history', async (_event, productId) => {
+    try {
+      const result = await db.select()
+        .from(schema.stockMovements)
+        .where(eq(schema.stockMovements.productId, productId))
+        .orderBy(sql`${schema.stockMovements.date} DESC`);
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
 }

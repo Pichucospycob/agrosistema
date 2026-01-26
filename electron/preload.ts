@@ -39,11 +39,22 @@ contextBridge.exposeInMainWorld('db', {
     getOrderDetails: (id: number) => ipcRenderer.invoke('get-order-details', id),
     emitRemito: (data: { orderId: number, items: any[] }) => ipcRenderer.invoke('emit-remito', data),
     closeOrder: (data: { orderId: number, items: any[] }) => ipcRenderer.invoke('close-order', data),
+    // Remitos Consolidados
+    getRemitos: () => ipcRenderer.invoke('get-remitos'),
+    getAggregatedItemsForOrders: (ids: number[]) => ipcRenderer.invoke('get-aggregated-items-for-orders', ids),
+    createConsolidatedRemito: (data: any) => ipcRenderer.invoke('create-consolidated-remito', data),
+    getRemitoDetails: (id: number) => ipcRenderer.invoke('get-remito-details', id),
+    closeConsolidatedRemito: (data: any) => ipcRenderer.invoke('close-consolidated-remito', data),
     getConsumptionByCampaign: () => ipcRenderer.invoke('get-consumption-by-campaign'),
     getContainerStatus: () => ipcRenderer.invoke('get-container-status'),
     updateProduct: (data: any) => ipcRenderer.invoke('update-product', data),
     updateLot: (data: any) => ipcRenderer.invoke('update-lot', data),
     getEfficiencyReport: () => ipcRenderer.invoke('get-efficiency-report'),
     getCampaignCostReport: () => ipcRenderer.invoke('get-campaign-cost-report'),
+    // Supplier Remitos
+    getSupplierRemitos: () => ipcRenderer.invoke('get-supplier-remitos'),
+    createSupplierRemito: (data: any) => ipcRenderer.invoke('create-supplier-remito', data),
+    getSupplierRemitoDetails: (id: number) => ipcRenderer.invoke('get-supplier-remito-details', id),
+    getProductHistory: (id: number) => ipcRenderer.invoke('get-product-history', id),
     quitApp: () => ipcRenderer.invoke('quit-app'),
 })

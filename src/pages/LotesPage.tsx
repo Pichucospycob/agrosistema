@@ -68,11 +68,13 @@ export default function LotesPage() {
         setOpen(true);
     }
 
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+
     async function handleDelete(id: number) {
-        if (!confirm("¿Seguro que deseas eliminar este lote?")) return;
         try {
             await window.db.deleteLot(id);
-            loadLots();
+            setLots(prev => prev.filter(l => l.id !== id));
+            setShowDeleteConfirm(null);
         } catch (error) {
             console.error("Error deleting lot:", error);
         }
@@ -194,7 +196,7 @@ export default function LotesPage() {
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(lot)} className="h-7 w-7 text-slate-400 hover:text-primary transition-colors">
                                                 <Edit2 className="h-4 w-4" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(lot.id)} className="h-7 w-7 text-slate-400 hover:text-red-600 transition-colors">
+                                            <Button variant="ghost" size="icon" onClick={() => setShowDeleteConfirm(lot.id)} className="h-7 w-7 text-slate-400 hover:text-red-600 transition-colors">
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -205,6 +207,32 @@ export default function LotesPage() {
                     </TableBody>
                 </Table>
             </Card>
+
+            <Dialog open={!!showDeleteConfirm} onOpenChange={(val) => !val && setShowDeleteConfirm(null)}>
+                <DialogContent className="max-w-md border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-red-600 h-1.5 w-full" />
+                    <div className="p-6 space-y-4">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold text-slate-900 uppercase tracking-tight">Eliminar Lote</DialogTitle>
+                            <DialogDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+                                ¿Estás seguro de que deseas eliminar el lote **{lots.find(l => l.id === showDeleteConfirm)?.name}**?
+                                <span className="block mt-2 font-bold text-red-600 uppercase text-[10px] tracking-widest">⚠️ Esta acción no se puede deshacer.</span>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0 sm:justify-between pt-2">
+                            <Button variant="ghost" onClick={() => setShowDeleteConfirm(null)} className="text-slate-500 font-bold text-[11px] uppercase tracking-widest">
+                                CANCELAR
+                            </Button>
+                            <Button
+                                onClick={() => showDeleteConfirm && handleDelete(showDeleteConfirm)}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 shadow-md h-10"
+                            >
+                                ELIMINAR PERMANENTEMENTE
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

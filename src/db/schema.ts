@@ -19,11 +19,23 @@ export const lots = sqliteTable('lots', {
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- Remitos (Consolidados) ---
+export const remitos = sqliteTable('remitos', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    remitoNumber: integer('remito_number').notNull(),
+    date: text('date').notNull(),
+    contractor: text('contractor'),
+    observations: text('observations'),
+    status: text('status').notNull().default('EMITIDO'), // EMITIDO, CERRADO, ANULADO
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
 // --- Órdenes de Trabajo ---
 export const orders = sqliteTable('orders', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     orderNumber: integer('order_number').notNull(), // Visible al usuario (ej: 604)
-    remitoNumber: integer('remito_number'), // Numero de remito correlativo
+    remitoNumber: integer('remito_number'), // Numero de remito correlativo (LEGACY/VINCULADO)
+    remitoId: integer('remito_id').references(() => remitos.id),
     date: text('date').notNull(), // Fecha emisión
     campaign: text('campaign'), // Ej: 2025/2026
     contractor: text('contractor'), // Contratista (Ej: Gatti Facundo)
@@ -93,4 +105,21 @@ export const emptyContainers = sqliteTable('empty_containers', {
     productId: integer('product_id').references(() => products.id).notNull(),
     pendingReturn: integer('pending_return').default(0).notNull(), // En el campo/galpón
     deliveredCat: integer('delivered_cat').default(0).notNull(), // Entregados al CAT
+});
+
+// --- Remitos de Entrada (Proveedores) ---
+export const supplierRemitos = sqliteTable('supplier_remitos', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    remitoNumber: text('remito_number').notNull(), // Número del remito del proveedor
+    date: text('date').notNull(),
+    supplier: text('supplier').notNull(),
+    observations: text('observations'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const supplierRemitoItems = sqliteTable('supplier_remito_items', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    remitoId: integer('remito_id').references(() => supplierRemitos.id).notNull(),
+    productId: integer('product_id').references(() => products.id).notNull(),
+    quantity: real('quantity').notNull(),
 });

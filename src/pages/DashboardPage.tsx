@@ -71,6 +71,39 @@ export default function DashboardPage() {
                 </Card>
             </div>
 
+            <div className="bg-slate-900 text-white rounded-xl p-8 mt-8 shadow-xl border border-slate-800">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-primary/20 rounded-lg text-primary">
+                        <ArrowRight size={20} />
+                    </div>
+                    <h2 className="text-xl font-bold uppercase tracking-tight">Nuevos Informes Avanzados</h2>
+                </div>
+                <div className="grid md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-primary uppercase tracking-widest">Análisis de Gestión</h3>
+                        <p className="text-sm text-slate-300 leading-relaxed">
+                            Utiliza el **Balance de Campaña** para negociar con proveedores. Compara compras totales vs consumo real por producto.
+                        </p>
+                        <div className="p-3 bg-white/5 rounded-lg border border-white/10">
+                            <p className="text-[10px] text-slate-400 font-mono">
+                                TIP: Haz clic en cualquier producto para ver su **Ficha Histórica** completa.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-green-400 uppercase tracking-widest">Control de Eficiencia</h3>
+                        <p className="text-sm text-slate-300 leading-relaxed">
+                            Mide la precisión de tus aplicadores con el reporte de **Eficiencia**. Visualiza porcentajes de desvío entre la receta y lo aplicado.
+                        </p>
+                        <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                            <p className="text-[10px] text-green-400 font-mono">
+                                ¡Importante! Requiere que todas las órdenes estén **Cerradas** para datos reales.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="bg-white/50 border border-slate-200 rounded-xl p-8 mt-8">
                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Recordatorio Importante</h3>
                 <div className="grid md:grid-cols-2 gap-8 text-xs text-slate-500 font-medium leading-relaxed">
@@ -82,6 +115,7 @@ export default function DashboardPage() {
                     </p>
                 </div>
             </div>
+
         </div>
     );
 }

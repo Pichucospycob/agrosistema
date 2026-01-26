@@ -1,7 +1,7 @@
 {
   "name": "agrosistema",
   "private": true,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "repository": {
     "type": "git",
     "url": "https://github.com/Pichucospycob/agrosistema.git"
@@ -10,7 +10,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && electron-builder",
+    "build": "tsc -b && vite build && electron-builder --win",
     "lint": "eslint .",
     "preview": "vite preview",
     "postinstall": "electron-builder install-app-deps",

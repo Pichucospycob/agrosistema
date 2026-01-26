@@ -1,10 +1,21 @@
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
-import { Leaf, Package, ClipboardList, Settings, LogOut, BarChart3, HelpCircle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Leaf, Package, ClipboardList, Settings, LogOut, BarChart3, HelpCircle, Truck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function Layout() {
     const navigate = useNavigate();
+    const [showQuitConfirm, setShowQuitConfirm] = useState(false);
 
     // Listen for navigation requests from the main process (Electron menu)
     useEffect(() => {
@@ -29,7 +40,7 @@ export default function Layout() {
             <aside className="w-64 bg-[#0F172A] flex flex-col z-20">
                 <div className="p-6 flex flex-col items-center gap-4 border-b border-white/10">
                     <div className="w-48 h-24 flex items-center justify-center overflow-hidden">
-                        <img src="/logo_maragu.png" alt="Logo Maragu" className="h-full w-full object-contain scale-110" />
+                        <img src="/logo_maragu.ico" alt="Logo Maragu" className="h-full w-full object-contain scale-110" />
                     </div>
                     <div className="text-center">
                         <h1 className="font-bold text-lg text-white tracking-tight leading-none">AGROSISTEMA</h1>
@@ -43,20 +54,18 @@ export default function Layout() {
                     </div>
                     <NavItem to="/guia" icon={<HelpCircle size={20} />} label="Guía de Uso" />
                     <NavItem to="/stock" icon={<Package size={20} />} label="Stock de Insumos" />
-                    <NavItem to="/ajustes" icon={<Settings size={20} />} label="Ajustes de Stock" />
-                    <NavItem to="/informes" icon={<BarChart3 size={20} />} label="Informes" />
-                    <NavItem to="/ordenes" icon={<ClipboardList size={20} />} label="Órdenes de Trabajo" />
                     <NavItem to="/lotes" icon={<Leaf size={20} />} label="Lotes" />
+                    <NavItem to="/ordenes" icon={<ClipboardList size={20} />} label="Órdenes de Trabajo" />
+                    <NavItem to="/remitos" icon={<Truck size={20} />} label="Remitos" />
+                    <NavItem to="/remitos-entrada" icon={<Package size={20} />} label="Entrada Insumos" />
+                    <NavItem to="/informes" icon={<BarChart3 size={20} />} label="Informes" />
+                    <NavItem to="/ajustes" icon={<Settings size={20} />} label="Ajustes de Stock" />
                 </nav>
 
                 <div className="p-4 border-t border-white/10">
                     <NavItem to="/config" icon={<Settings size={20} />} label="Parámetros Sistema" />
                     <button
-                        onClick={() => {
-                            if (confirm("¿Estás seguro de que deseas salir del programa?")) {
-                                (window as any).db.quitApp();
-                            }
-                        }}
+                        onClick={() => setShowQuitConfirm(true)}
                         className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-bold text-red-400 hover:bg-white/5 transition-all"
                     >
                         <LogOut size={16} />
@@ -87,6 +96,32 @@ export default function Layout() {
                     <Outlet />
                 </div>
             </main>
+
+            <Dialog open={showQuitConfirm} onOpenChange={setShowQuitConfirm}>
+                <DialogContent className="max-w-sm border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-red-600 h-1.5 w-full" />
+                    <div className="p-6 space-y-4">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold text-slate-900 uppercase tracking-tight">Cerrar Agrosistema</DialogTitle>
+                            <DialogDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+                                ¿Estás seguro de que deseas salir del programa?
+                                <span className="block mt-1">Se cerrarán todas las tareas pendientes.</span>
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0 sm:justify-between">
+                            <Button variant="ghost" onClick={() => setShowQuitConfirm(false)} className="text-slate-500 font-bold text-[11px] uppercase tracking-widest">
+                                CANCELAR
+                            </Button>
+                            <Button
+                                onClick={() => (window as any).db.quitApp()}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 shadow-md h-10"
+                            >
+                                SALIR DEL PROGRAMA
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

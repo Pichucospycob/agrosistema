@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,25 +19,23 @@ export default function AdjustmentPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    async function loadData() {
+    const loadData = useCallback(async () => {
         try {
             const [productsData, movementsData] = await Promise.all([
                 window.db.getProducts(),
                 window.db.getStockMovements()
             ]);
             setProducts(productsData);
-            // Filter only AJUSTE types or non-order/non-purchase if preferred,
-            // but user asked for "manipulacion manual", so let's show all or just adjustments.
-            // Let's show all but highlight manually created ones.
-            setMovements(movementsData.reverse()); // Latest first
+            // Latest first
+            setMovements(movementsData.reverse());
         } catch (error) {
             console.error("Error loading data:", error);
         }
-    }
+    }, []);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     async function handleAdjust() {
         if (!productId || !quantity || !description) {
@@ -102,7 +100,7 @@ export default function AdjustmentPage() {
                             >
                                 <option value="">Seleccionar insumo...</option>
                                 {products.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name} ({p.presentation}) - Stock: {p.currentStock}</option>
+                                    <option key={p.id} value={p.id}>{p.name} ({p.presentation}) - Stock: {Number(p.currentStock || 0).toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</option>
                                 ))}
                             </select>
                         </div>
