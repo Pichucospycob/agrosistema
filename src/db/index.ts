@@ -41,6 +41,81 @@ function saveDb() {
 export function runMigrations() {
     if (!sqlDbInstance) return;
     try {
+        // --- Core Schema Initialization ---
+        // Ensure all tables exist from the start
+        sqlDbInstance.run(`
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                active_ingredient TEXT,
+                presentation TEXT,
+                current_stock REAL DEFAULT 0 NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS lots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                surface REAL NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_number INTEGER NOT NULL,
+                remito_number INTEGER,
+                remito_id INTEGER,
+                date TEXT NOT NULL,
+                campaign TEXT,
+                contractor TEXT,
+                field TEXT,
+                crop TEXT,
+                labor TEXT,
+                implanted INTEGER,
+                total_surface REAL,
+                status TEXT NOT NULL DEFAULT 'BORRADOR',
+                nozzle_type TEXT,
+                nozzle_description TEXT,
+                water_per_ha REAL,
+                pressure REAL,
+                pressure_unit TEXT,
+                wind_speed REAL,
+                humidity REAL,
+                instructions TEXT,
+                observations TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS order_lots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER NOT NULL REFERENCES orders(id),
+                lot_id INTEGER NOT NULL REFERENCES lots(id),
+                applied_surface REAL NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER NOT NULL REFERENCES orders(id),
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                dose REAL NOT NULL,
+                quantity_theoretical REAL NOT NULL,
+                quantity_delivered REAL DEFAULT 0,
+                quantity_returned REAL DEFAULT 0,
+                quantity_real REAL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS stock_movements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT DEFAULT CURRENT_TIMESTAMP,
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                order_id INTEGER REFERENCES orders(id),
+                type TEXT NOT NULL,
+                quantity REAL NOT NULL,
+                description TEXT
+            );
+            CREATE TABLE IF NOT EXISTS empty_containers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                pending_return INTEGER DEFAULT 0 NOT NULL,
+                delivered_cat INTEGER DEFAULT 0 NOT NULL
+            );
+        `);
+
         // Explicitly check and add columns. sql.js uses .exec() which runs multiple statements if needed, 
         // or .run() for single with params.
 
