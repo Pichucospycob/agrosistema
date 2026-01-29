@@ -4,22 +4,24 @@ import * as schema from './schema';
 import fs from 'fs';
 
 // En Electron main process, usamos path absoluto si es posible o relativo al running directory
-// Para dev 'local.db' esta en raiz.
-const DB_PATH = 'local.db';
+// Para dev 'local.db' esta en raiz, pero Electron pasara la ruta correcta.
+let currentDbPath = 'local.db';
 
 export type AppDatabase = ReturnType<typeof drizzle>;
 
 let dbInstance: AppDatabase | null = null;
 let sqlDbInstance: any = null; // To call export()
 
-export async function initDb(): Promise<{ db: AppDatabase, save: () => void }> {
+export async function initDb(dbPath?: string): Promise<{ db: AppDatabase, save: () => void }> {
+    if (dbPath) currentDbPath = dbPath;
+
     if (dbInstance && sqlDbInstance) return { db: dbInstance, save: saveDb };
 
     const SQL = await initSqlJs();
     let buffer: Buffer | null = null;
 
-    if (fs.existsSync(DB_PATH)) {
-        buffer = fs.readFileSync(DB_PATH);
+    if (fs.existsSync(currentDbPath)) {
+        buffer = fs.readFileSync(currentDbPath);
     }
 
     // @ts-ignore
@@ -33,7 +35,7 @@ function saveDb() {
     if (!sqlDbInstance) return;
     const data = sqlDbInstance.export();
     const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
+    fs.writeFileSync(currentDbPath, buffer);
 }
 
 export function runMigrations() {

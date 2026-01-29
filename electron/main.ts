@@ -3,6 +3,7 @@ import { autoUpdater } from 'electron-updater'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import fs from 'node:fs'
 import { initDb, AppDatabase, runMigrations } from '../src/db'
 import * as schema from '../src/db/schema'
 import { eq, sql } from 'drizzle-orm';
@@ -124,18 +125,24 @@ app.on('activate', () => {
 
 app.whenReady().then(async () => {
   try {
-    const { db, save } = await initDb();
+    const userDataPath = app.getPath('userData');
+    const dbPath = path.join(userDataPath, 'local.db');
+    const legacyDbPath = path.join(process.cwd(), 'local.db');
+
+    // Migration Logic: If DB doesn't exist in userData but does in working dir, copy it.
+    if (!fs.existsSync(dbPath) && fs.existsSync(legacyDbPath)) {
+      console.log('Migrating legacy database from:', legacyDbPath);
+      try {
+        fs.copyFileSync(legacyDbPath, dbPath);
+        console.log('Migration successful.');
+        // We keep the old one as backup for now, just in case.
+      } catch (err) {
+        console.error('Migration failed:', err);
+      }
+    }
+
+    const { db, save } = await initDb(dbPath);
     runMigrations(); // uses internal instance
-
-    // Patch DB using the loaded sql.js instance
-    // We need access to the underlying SQL.js 'run' method.
-    // Drizzle's db object doesn't expose raw .run() easily on the top level in all drivers,
-    // but since we keep `sqlDbInstance` in `src/db/index.ts` but don't export it...
-    // Wait, main.ts imports initDb. Let's see if we can hack the patch inside main or if we need to export the raw instance.
-
-    // Actually, initDb returns { db, save }. 
-    // We can create a new function in `src/db/index.ts` called `patchSchema` that uses the internal `sqlDbInstance`.
-    // That is cleaner.
 
     createWindow();
     setupIpcHandlers(db, save);
