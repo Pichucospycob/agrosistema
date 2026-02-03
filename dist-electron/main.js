@@ -16,6 +16,7 @@ import require$$4$1 from "http";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import fs$1 from "node:fs";
 import initSqlJs from "sql.js";
 var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
 var main$1 = {};
@@ -20131,15 +20132,16 @@ const schema = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProper
   supplierRemitoItems,
   supplierRemitos
 }, Symbol.toStringTag, { value: "Module" }));
-const DB_PATH = "local.db";
+let currentDbPath = "local.db";
 let dbInstance = null;
 let sqlDbInstance = null;
-async function initDb() {
+async function initDb(dbPath) {
+  if (dbPath) currentDbPath = dbPath;
   if (dbInstance && sqlDbInstance) return { db: dbInstance, save: saveDb };
   const SQL2 = await initSqlJs();
   let buffer = null;
-  if (require$$1.existsSync(DB_PATH)) {
-    buffer = require$$1.readFileSync(DB_PATH);
+  if (require$$1.existsSync(currentDbPath)) {
+    buffer = require$$1.readFileSync(currentDbPath);
   }
   sqlDbInstance = new SQL2.Database(buffer);
   dbInstance = drizzle(sqlDbInstance, { schema });
@@ -20149,11 +20151,83 @@ function saveDb() {
   if (!sqlDbInstance) return;
   const data = sqlDbInstance.export();
   const buffer = Buffer.from(data);
-  require$$1.writeFileSync(DB_PATH, buffer);
+  require$$1.writeFileSync(currentDbPath, buffer);
 }
 function runMigrations() {
   if (!sqlDbInstance) return;
   try {
+    sqlDbInstance.run(`
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                active_ingredient TEXT,
+                presentation TEXT,
+                current_stock REAL DEFAULT 0 NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS lots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                surface REAL NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_number INTEGER NOT NULL,
+                remito_number INTEGER,
+                remito_id INTEGER,
+                date TEXT NOT NULL,
+                campaign TEXT,
+                contractor TEXT,
+                field TEXT,
+                crop TEXT,
+                labor TEXT,
+                implanted INTEGER,
+                total_surface REAL,
+                status TEXT NOT NULL DEFAULT 'BORRADOR',
+                nozzle_type TEXT,
+                nozzle_description TEXT,
+                water_per_ha REAL,
+                pressure REAL,
+                pressure_unit TEXT,
+                wind_speed REAL,
+                humidity REAL,
+                instructions TEXT,
+                observations TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS order_lots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER NOT NULL REFERENCES orders(id),
+                lot_id INTEGER NOT NULL REFERENCES lots(id),
+                applied_surface REAL NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER NOT NULL REFERENCES orders(id),
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                dose REAL NOT NULL,
+                quantity_theoretical REAL NOT NULL,
+                quantity_delivered REAL DEFAULT 0,
+                quantity_returned REAL DEFAULT 0,
+                quantity_real REAL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS stock_movements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT DEFAULT CURRENT_TIMESTAMP,
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                order_id INTEGER REFERENCES orders(id),
+                type TEXT NOT NULL,
+                quantity REAL NOT NULL,
+                description TEXT
+            );
+            CREATE TABLE IF NOT EXISTS empty_containers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL REFERENCES products(id),
+                pending_return INTEGER DEFAULT 0 NOT NULL,
+                delivered_cat INTEGER DEFAULT 0 NOT NULL
+            );
+        `);
     const checkColumn = (table, col) => {
       const res = sqlDbInstance.exec(`PRAGMA table_info(${table})`);
       if (res.length > 0) {
@@ -20316,7 +20390,19 @@ app.on("activate", () => {
 });
 app.whenReady().then(async () => {
   try {
-    const { db, save } = await initDb();
+    const userDataPath = app.getPath("userData");
+    const dbPath = path.join(userDataPath, "local.db");
+    const legacyDbPath = path.join(process.cwd(), "local.db");
+    if (!fs$1.existsSync(dbPath) && fs$1.existsSync(legacyDbPath)) {
+      console.log("Migrating legacy database from:", legacyDbPath);
+      try {
+        fs$1.copyFileSync(legacyDbPath, dbPath);
+        console.log("Migration successful.");
+      } catch (err) {
+        console.error("Migration failed:", err);
+      }
+    }
+    const { db, save } = await initDb(dbPath);
     runMigrations();
     createWindow();
     setupIpcHandlers(db, save);

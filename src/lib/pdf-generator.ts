@@ -328,3 +328,164 @@ export const generateConsolidatedRemitoPDF = async (remito: any, items: any[]) =
     const typeTag = isDefinitive ? 'FINAL' : 'PROV';
     doc.save(`REMITO-CONSOLIDADO-${typeTag}-${remitoNumStr}.pdf`);
 };
+
+export const generateConsumptionReportPDF = async (campaign: string, data: any[]) => {
+    const doc = new jsPDF();
+    const logoData = await getLogoBase64();
+    if (logoData) {
+        doc.addImage(logoData, 'PNG', 15, 10, 25, 18.75);
+    }
+
+    doc.setFontSize(20);
+    doc.text("BALANCE DE CAMPAÑA", 105, 20, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.text(`Campaña: ${campaign}`, 150, 30);
+    doc.text(`Fecha Emisión: ${format(new Date(), 'dd/MM/yyyy')}`, 150, 35);
+
+    doc.setFontSize(12);
+    doc.text("AGROSISTEMA", 15, 34);
+    doc.setFontSize(8);
+    doc.text("GESTIÓN AGROPECUARIA", 15, 38);
+
+    doc.setLineWidth(0.5);
+    doc.line(15, 45, 195, 45);
+
+    autoTable(doc, {
+        startY: 55,
+        head: [['Producto', 'Compras (Ingreso)', 'Uso Real (Salida)', 'Faltante / Stock']],
+        body: data.map(item => [
+            item.name,
+            formatQuantity(item.bought),
+            formatQuantity(item.used),
+            formatQuantity(item.bought - item.used)
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [15, 23, 42] },
+        styles: { fontSize: 9 }
+    });
+
+    doc.save(`Balance-${campaign}-${format(new Date(), 'yyyyMMdd')}.pdf`);
+};
+
+export const generateProductHistoryPDF = async (productName: string, history: any[]) => {
+    const doc = new jsPDF();
+    const logoData = await getLogoBase64();
+    if (logoData) {
+        doc.addImage(logoData, 'PNG', 15, 10, 25, 18.75);
+    }
+
+    doc.setFontSize(20);
+    doc.text("HISTORIAL DE PRODUCTO", 105, 20, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.text(`Producto: ${productName}`, 15, 55);
+    doc.text(`Fecha Emisión: ${format(new Date(), 'dd/MM/yyyy')}`, 150, 30);
+
+    doc.setFontSize(12);
+    doc.text("AGROSISTEMA", 15, 34);
+    doc.setFontSize(8);
+    doc.text("GESTIÓN AGROPECUARIA", 15, 38);
+
+    doc.setLineWidth(0.5);
+    doc.line(15, 45, 195, 45);
+
+    autoTable(doc, {
+        startY: 65,
+        head: [['Fecha', 'Tipo', 'Detalle', 'Cantidad']],
+        body: history.map(m => [
+            m.date ? format(new Date(m.date), 'dd/MM/yyyy') : '-',
+            m.type.replace('_', ' '),
+            m.description || '-',
+            m.quantity > 0 ? `+${formatQuantity(m.quantity)}` : formatQuantity(m.quantity)
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [15, 23, 42] },
+        styles: { fontSize: 9 }
+    });
+
+    doc.save(`Historial-${productName.replace(/\s+/g, '_')}-${format(new Date(), 'yyyyMMdd')}.pdf`);
+};
+
+export const generateEfficiencyReportPDF = async (campaign: string, data: any[]) => {
+    const doc = new jsPDF();
+    const logoData = await getLogoBase64();
+    if (logoData) {
+        doc.addImage(logoData, 'PNG', 15, 10, 25, 18.75);
+    }
+
+    doc.setFontSize(20);
+    doc.text("PRECISIÓN DE APLICACIÓN", 105, 20, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.text(`Campaña: ${campaign}`, 150, 30);
+    doc.text(`Fecha Emisión: ${format(new Date(), 'dd/MM/yyyy')}`, 150, 35);
+
+    doc.setFontSize(12);
+    doc.text("AGROSISTEMA", 15, 34);
+    doc.setFontSize(8);
+    doc.text("GESTIÓN AGROPECUARIA", 15, 38);
+
+    doc.setLineWidth(0.5);
+    doc.line(15, 45, 195, 45);
+
+    autoTable(doc, {
+        startY: 55,
+        head: [['Orden', 'Campo', 'Producto', 'Teórico', 'Real', 'Desvío %']],
+        body: data.map(e => {
+            const diff = e.real - e.theoretical;
+            const perc = (diff / (e.theoretical || 1)) * 100;
+            return [
+                `#${padNumber(e.orderNumber, 6)}`,
+                e.field,
+                e.productName,
+                formatQuantity(e.theoretical),
+                formatQuantity(e.real),
+                `${perc > 0 ? '+' : ''}${perc.toFixed(2)}%`
+            ];
+        }),
+        theme: 'striped',
+        headStyles: { fillColor: [15, 23, 42] },
+        styles: { fontSize: 8 }
+    });
+
+    doc.save(`Eficiencia-${campaign}-${format(new Date(), 'yyyyMMdd')}.pdf`);
+};
+
+export const generateStockReportPDF = async (products: any[]) => {
+    const doc = new jsPDF();
+    const logoData = await getLogoBase64();
+    if (logoData) {
+        doc.addImage(logoData, 'PNG', 15, 10, 25, 18.75);
+    }
+
+    doc.setFontSize(20);
+    doc.text("ESTADO DE STOCK", 105, 20, { align: "center" });
+
+    doc.setFontSize(10);
+    doc.text(`Fecha Emisión: ${format(new Date(), 'dd/MM/yyyy')}`, 150, 30);
+
+    doc.setFontSize(12);
+    doc.text("AGROSISTEMA", 15, 34);
+    doc.setFontSize(8);
+    doc.text("GESTIÓN AGROPECUARIA", 15, 38);
+
+    doc.setLineWidth(0.5);
+    doc.line(15, 45, 195, 45);
+
+    autoTable(doc, {
+        startY: 55,
+        head: [['Insumo', 'Principio Activo', 'Presentación', 'Stock Actual']],
+        body: products.map(p => [
+            p.name,
+            p.activeIngredient || '-',
+            p.presentation || '-',
+            p.currentStock?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0,00'
+        ]),
+        theme: 'striped',
+        headStyles: { fillColor: [15, 23, 42] },
+        styles: { fontSize: 9 }
+    });
+
+    doc.save(`Stock-Actual-${format(new Date(), 'yyyyMMdd')}.pdf`);
+};

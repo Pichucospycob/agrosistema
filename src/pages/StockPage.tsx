@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Search, Package, Trash2, Edit2, Loader2 } from "lucide-react";
+import { Plus, Search, Package, Trash2, Edit2, Loader2, FileDown } from "lucide-react";
+import { generateStockReportPDF } from "@/lib/pdf-generator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
     Dialog,
@@ -102,6 +103,14 @@ export default function StockPage() {
                 </div>
 
                 <div className="flex gap-2">
+                    <Button
+                        variant="ghost"
+                        onClick={() => generateStockReportPDF(products)}
+                        className="text-slate-400 hover:text-primary font-bold text-xs flex items-center gap-2"
+                    >
+                        <FileDown size={16} /> Exportar Stock
+                    </Button>
+
                     <Dialog open={openEntry} onOpenChange={setOpenEntry}>
                         <DialogTrigger asChild>
                             <Button variant="outline" className="border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold px-4 h-9 transition-all">

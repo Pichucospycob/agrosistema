@@ -3,10 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Calendar, Target, Wallet, History, Search, Package, TrendingDown, TrendingUp } from "lucide-react";
+import { BarChart3, Calendar, Target, Wallet, History, Search, Package, TrendingDown, TrendingUp, FileDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { generateConsumptionReportPDF, generateProductHistoryPDF, generateEfficiencyReportPDF } from "@/lib/pdf-generator";
 
 export default function ReportsPage() {
     const [consumptionData, setConsumptionData] = useState<any[]>([]);
@@ -189,7 +190,17 @@ export default function ReportsPage() {
                         <CardHeader className="bg-slate-50/50 border-b py-4">
                             <CardTitle className="text-xs font-black uppercase text-slate-800 tracking-widest flex items-center justify-between">
                                 Resumen de Compras vs Consumo Real
-                                <span className="bg-primary/10 text-primary px-3 py-1 rounded text-[10px] font-black">{selectedCampaign}</span>
+                                <div className="flex items-center gap-3">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => generateConsumptionReportPDF(selectedCampaign, campaignBalance)}
+                                        className="h-8 text-[9px] font-black uppercase tracking-tighter border-slate-200 hover:bg-slate-50"
+                                    >
+                                        <FileDown className="mr-2 h-3.5 w-3.5 text-primary" /> Exportar PDF
+                                    </Button>
+                                    <span className="bg-primary/10 text-primary px-3 py-1 rounded text-[10px] font-black">{selectedCampaign}</span>
+                                </div>
                             </CardTitle>
                         </CardHeader>
                         <Table>
@@ -244,6 +255,19 @@ export default function ReportsPage() {
                                 {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                             </select>
                         </div>
+                        {selectedProductId && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    const productName = products.find(p => p.id === parseInt(selectedProductId))?.name || "Producto";
+                                    generateProductHistoryPDF(productName, productHistory);
+                                }}
+                                className="h-10 text-[10px] font-black uppercase tracking-widest border-slate-200 hover:bg-slate-50 px-6"
+                            >
+                                <FileDown className="mr-2 h-4 w-4 text-primary" /> Descargar Ficha PDF
+                            </Button>
+                        )}
                     </div>
 
                     {selectedProductId && (
@@ -308,7 +332,17 @@ export default function ReportsPage() {
                                 <CardTitle className="text-[11px] font-extrabold uppercase text-slate-800 tracking-tight">Precisión de Aplicación (Real vs Teórico)</CardTitle>
                                 <p className="text-[9px] text-slate-500 font-bold uppercase italic">Detecta ahorro o exceso en el uso de insumos en el campo</p>
                             </div>
-                            <Target className="h-5 w-5 text-primary opacity-30" />
+                            <div className="flex items-center gap-4">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => generateEfficiencyReportPDF(selectedCampaign, efficiencyData.filter(e => selectedCampaign === "TODAS" || e.campaign === selectedCampaign))}
+                                    className="h-8 text-[9px] font-black uppercase tracking-tighter border-slate-200 hover:bg-slate-50"
+                                >
+                                    <FileDown className="mr-2 h-3.5 w-3.5 text-primary" /> Exportar Informe PDF
+                                </Button>
+                                <Target className="h-5 w-5 text-primary opacity-30" />
+                            </div>
                         </CardHeader>
                         <Table>
                             <TableHeader>
