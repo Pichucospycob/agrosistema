@@ -370,7 +370,7 @@ function StockEntryForm({ products, onSuccess }: { products: any[], onSuccess: (
                 >
                     <option value="">Seleccionar producto...</option>
                     {products.map(p => (
-                        <option key={p.id} value={p.id}>{p.name} ({p.presentation})</option>
+                        <option key={p.id} value={p.id}>[P-{p.id}] {p.name} ({p.presentation})</option>
                     ))}
                 </select>
             </div>

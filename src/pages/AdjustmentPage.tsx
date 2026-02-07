@@ -100,7 +100,7 @@ export default function AdjustmentPage() {
                             >
                                 <option value="">Seleccionar insumo...</option>
                                 {products.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name} ({p.presentation}) - Stock: {Number(p.currentStock || 0).toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</option>
+                                    <option key={p.id} value={p.id}>[P-{p.id}] {p.name} ({p.presentation}) - Stock: {Number(p.currentStock || 0).toLocaleString('es-AR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}</option>
                                 ))}
                             </select>
                         </div>
@@ -184,7 +184,10 @@ export default function AdjustmentPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="py-4">
-                                                <div className="text-xs font-semibold text-slate-800">{m.productName}</div>
+                                                <div className="text-xs font-semibold text-slate-800">
+                                                    {m.productName || `[P-${m.productId}] PRODUCTO ELIMINADO`}
+                                                </div>
+                                                <div className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">ID: P-{m.productId}</div>
                                             </TableCell>
                                             <TableCell className="py-4 text-center">
                                                 <div className={`text-xs font-bold flex items-center justify-center gap-1 ${m.quantity > 0 ? 'text-green-600' : 'text-red-500'}`}>

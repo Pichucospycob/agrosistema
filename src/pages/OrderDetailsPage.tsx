@@ -175,8 +175,12 @@ export default function OrderDetailsPage() {
                                     {items.map((item) => (
                                         <tr key={item.id} className="hover:bg-slate-50/30">
                                             <td className="py-4 px-6">
-                                                <div className="font-bold text-slate-800">{item.productName}</div>
-                                                <div className="text-[10px] text-slate-400 font-semibold">{item.productPresentation}</div>
+                                                <div className="font-bold text-slate-800">
+                                                    {item.productName || `[P-${item.productId}] PRODUCTO ELIMINADO`}
+                                                </div>
+                                                <div className="text-[10px] text-slate-400 font-semibold">
+                                                    {item.productName ? item.productPresentation : `ID: P-${item.productId}`}
+                                                </div>
                                             </td>
                                             <td className="py-4 px-4 text-right font-mono font-bold text-primary">
                                                 {formatDose(item.dose)}

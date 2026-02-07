@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Printer, CheckCheck, AlertCircle } from "lucide-react";
+import { ArrowLeft, Printer, CheckCheck, AlertCircle, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { generateConsolidatedRemitoPDF } from "@/lib/pdf-generator";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,8 @@ export default function RemitoDetailsPage() {
     const [remito, setRemito] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+    const [showUndoConfirm, setShowUndoConfirm] = useState(false);
+    const [cierreStep, setCierreStep] = useState(1);
     const [alertConfig, setAlertConfig] = useState<{ open: boolean, title: string, message: string }>({ open: false, title: "", message: "" });
 
     const loadData = useCallback(async () => {
@@ -65,11 +67,27 @@ export default function RemitoDetailsPage() {
                 }))
             });
             setShowCloseConfirm(false);
+            setCierreStep(1);
             loadData();
             setAlertConfig({ open: true, title: "Éxito", message: "Remito cerrado y órdenes liquidadas correctamente." });
         } catch (error) {
             console.error(error);
             setAlertConfig({ open: true, title: "Error", message: "Hubo un problema al intentar cerrar el remito." });
+        }
+    };
+
+    const handleUndoClose = async () => {
+        setLoading(true);
+        try {
+            await window.db.undoCloseConsolidatedRemito(remito.id);
+            setShowUndoConfirm(false);
+            loadData();
+            setAlertConfig({ open: true, title: "Éxito", message: "Cierre anulado. El remito ahora está abierto para edición." });
+        } catch (error) {
+            console.error(error);
+            setAlertConfig({ open: true, title: "Error", message: "No se pudo anular el cierre del remito." });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -100,6 +118,11 @@ export default function RemitoDetailsPage() {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {isDefinitive && (
+                            <Button variant="ghost" onClick={() => setShowUndoConfirm(true)} className="text-slate-400 hover:text-red-500 font-bold border-transparent transition-colors">
+                                <RotateCcw className="mr-2 h-4 w-4" /> ANULAR CIERRE
+                            </Button>
+                        )}
                         <Button variant="outline" onClick={() => generateConsolidatedRemitoPDF(remito, remito.items)} className="font-bold border-slate-200">
                             <Printer className="mr-2 h-4 w-4" /> IMPRIMIR PDF
                         </Button>
@@ -171,8 +194,12 @@ export default function RemitoDetailsPage() {
                                     return (
                                         <div key={item.productId} className="grid grid-cols-7 gap-4 items-center px-6 py-4 hover:bg-slate-50/50 transition-colors">
                                             <div className="col-span-2">
-                                                <p className="font-bold text-xs text-slate-900">{item.productName}</p>
-                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">{item.productPresentation}</p>
+                                                <p className="font-bold text-xs text-slate-900">
+                                                    {item.productName || `[P-${item.productId}] PRODUCTO ELIMINADO`}
+                                                </p>
+                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
+                                                    {item.productName ? item.productPresentation : `ID: P-${item.productId}`}
+                                                </p>
                                             </div>
                                             <div className="text-right font-mono text-slate-400 text-xs font-bold">
                                                 {theoretical.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -259,7 +286,14 @@ export default function RemitoDetailsPage() {
                             </div>
 
                             {!isDefinitive && (
-                                <div className="bg-slate-50 p-6 border-t border-slate-100 flex justify-end">
+                                <div className="bg-orange-50 p-6 border-t border-orange-100 flex justify-between items-center shadow-inner">
+                                    <div className="flex items-center gap-3 text-orange-700">
+                                        <AlertCircle className="h-5 w-5 animate-pulse" />
+                                        <div className="text-[11px] font-bold leading-tight">
+                                            ESTADO: PENDIENTE DE DEVOLUCIONES<br />
+                                            <span className="font-medium">El stock del galpón no se actualizará hasta que cierre el remito.</span>
+                                        </div>
+                                    </div>
                                     <div className="flex items-center gap-4">
                                         {!showCloseConfirm ? (
                                             <Button onClick={() => setShowCloseConfirm(true)} className="bg-green-600 hover:bg-green-700 font-bold shadow-md px-8 text-white">
@@ -267,9 +301,11 @@ export default function RemitoDetailsPage() {
                                             </Button>
                                         ) : (
                                             <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-2">
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">¿Confirmar liquidación de todas las órdenes asociadas?</span>
+                                                <div className="bg-red-500 text-white px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-2">
+                                                    <AlertCircle className="h-3 w-3" /> ¿Confirmar liquidación definitiva?
+                                                </div>
                                                 <Button variant="ghost" size="sm" onClick={() => setShowCloseConfirm(false)} className="text-slate-400 hover:text-slate-900 font-bold text-xs uppercase">Cancelar</Button>
-                                                <Button onClick={handleCloseRemito} size="sm" className="bg-green-600 hover:bg-green-700 font-bold px-4 text-white">SÍ, LIQUIDAR STOCK</Button>
+                                                <Button onClick={handleCloseRemito} size="sm" className="bg-red-600 hover:bg-red-700 font-bold px-6 text-white shadow-xl">SÍ, CERRAR AHORA</Button>
                                             </div>
                                         )}
                                     </div>
@@ -279,6 +315,82 @@ export default function RemitoDetailsPage() {
                     </Card>
                 </div>
             </div>
+
+            {/* Multi-step Cierre Dialog */}
+            <Dialog open={showCloseConfirm} onOpenChange={(val) => { setShowCloseConfirm(val); if (!val) setCierreStep(1); }}>
+                <DialogContent className="max-w-md border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-red-600 h-1.5 w-full" />
+                    <div className="p-8 space-y-6">
+                        {cierreStep === 1 ? (
+                            <>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3 text-red-600">
+                                        <AlertCircle className="h-6 w-6" />
+                                        <h2 className="text-xl font-bold uppercase tracking-tight">Atención: Cierre de Remito</h2>
+                                    </div>
+                                    <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                                        Está por <b>liquidar definitivamente</b> el stock de este remito. Esta acción:
+                                    </p>
+                                    <ul className="text-xs text-slate-500 space-y-2 list-disc pl-4">
+                                        <li>Deducirá el consumo real del stock del galpón.</li>
+                                        <li>Dará por finalizadas todas las órdenes vinculadas.</li>
+                                        <li>Generará movimientos de retorno automáticos.</li>
+                                    </ul>
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <Button variant="ghost" onClick={() => setShowCloseConfirm(false)} className="flex-1 font-bold text-slate-400 uppercase h-11">Cancelar</Button>
+                                    <Button onClick={() => setCierreStep(2)} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold uppercase h-11 shadow-lg">Entiendo, Continuar</Button>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-3 text-orange-600">
+                                        <CheckCheck className="h-6 w-6" />
+                                        <h2 className="text-xl font-bold uppercase tracking-tight">Confirmación Final</h2>
+                                    </div>
+                                    <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                                        ¿Está <b>absolutamente seguro</b> de que las devoluciones informadas coinciden con lo que volvió del campo?
+                                    </p>
+                                    <div className="bg-orange-50 border border-orange-100 p-4 rounded-lg">
+                                        <p className="text-[10px] text-orange-700 font-bold leading-tight">
+                                            Si cierra sin informar lo real, el stock del sistema no coincidirá con el stock físico del galpón.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <Button variant="ghost" onClick={() => setCierreStep(1)} className="flex-1 font-bold text-slate-400 uppercase h-11">Volver</Button>
+                                    <Button onClick={handleCloseRemito} className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold uppercase h-11 shadow-lg">Sí, Confirmar Cierre</Button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Undo Confirmation Dialog */}
+            <Dialog open={showUndoConfirm} onOpenChange={setShowUndoConfirm}>
+                <DialogContent className="max-w-md border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-slate-900 h-1.5 w-full" />
+                    <div className="p-8 space-y-6">
+                        <div className="space-y-4 text-center">
+                            <div className="flex justify-center">
+                                <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-900">
+                                    <RotateCcw className="h-6 w-6" />
+                                </div>
+                            </div>
+                            <h2 className="text-xl font-bold uppercase tracking-tight text-slate-900">Anular Cierre de Remito</h2>
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                                ¿Desea anular el cierre? El remito y sus órdenes volverán al estado <b>Abierto</b> y se revertirán los movimientos de stock.
+                            </p>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <Button variant="ghost" onClick={() => setShowUndoConfirm(false)} className="flex-1 font-bold text-slate-400 uppercase h-11">Cancelar</Button>
+                            <Button onClick={handleUndoClose} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase h-11 shadow-lg">Anular Cierre</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={alertConfig.open} onOpenChange={(val) => setAlertConfig({ ...alertConfig, open: val })}>
                 <DialogContent className="max-w-sm border shadow-2xl bg-white p-0 overflow-hidden">

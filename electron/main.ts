@@ -900,6 +900,57 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
+  ipcMain.handle('undo-close-consolidated-remito', async (_event, remitoId) => {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const remito = await tx.select().from(schema.remitos).where(eq(schema.remitos.id, remitoId)).get();
+        if (!remito || remito.status !== 'CERRADO') throw new Error("Remito no encontrado o no está cerrado");
+
+        const remitoNumber = remito.remitoNumber;
+
+        // 1. Revert Remito and Orders status
+        await tx.update(schema.remitos).set({ status: 'EMITIDO' }).where(eq(schema.remitos.id, remitoId));
+        await tx.update(schema.orders).set({ status: 'EMITIDA' }).where(eq(schema.orders.remitoId, remitoId));
+
+        // 2. Find and revert Stock Movements (Returns and Adjustments)
+        const movementsToRevert = await tx.select().from(schema.stockMovements)
+          .where(sql`${schema.stockMovements.description} LIKE ${`%Remito #${remitoNumber}`}`);
+
+        for (const mov of movementsToRevert) {
+          if (mov.type === 'RETORNO_SOBRANTE' || mov.type === 'AJUSTE') {
+            const product = await tx.select().from(schema.products).where(eq(schema.products.id, mov.productId)).get();
+            if (product) {
+              await tx.update(schema.products)
+                .set({ currentStock: (product.currentStock || 0) - mov.quantity })
+                .where(eq(schema.products.id, mov.productId));
+            }
+            await tx.delete(schema.stockMovements).where(eq(schema.stockMovements.id, mov.id));
+          }
+        }
+
+        // 3. Reset OrderItems calculations
+        const orders = await tx.select().from(schema.orders).where(eq(schema.orders.remitoId, remitoId));
+        const orderIds = orders.map(o => o.id);
+
+        if (orderIds.length > 0) {
+          await tx.update(schema.orderItems)
+            .set({
+              quantityReturned: 0,
+              quantityReal: null
+            })
+            .where(sql`${schema.orderItems.orderId} IN (${sql.join(orderIds, sql`, `)})`);
+        }
+
+        return true;
+      });
+      save();
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
   ipcMain.handle('get-efficiency-report', async () => {
     try {
       const result = await db.select({

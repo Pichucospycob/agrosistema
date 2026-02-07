@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld('db', {
     updateLot: (data: any) => ipcRenderer.invoke('update-lot', data),
     getEfficiencyReport: () => ipcRenderer.invoke('get-efficiency-report'),
     getCampaignCostReport: () => ipcRenderer.invoke('get-campaign-cost-report'),
+    undoCloseConsolidatedRemito: (id: number) => ipcRenderer.invoke('undo-close-consolidated-remito', id),
     // Supplier Remitos
     getSupplierRemitos: () => ipcRenderer.invoke('get-supplier-remitos'),
     createSupplierRemito: (data: any) => ipcRenderer.invoke('create-supplier-remito', data),

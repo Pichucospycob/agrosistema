@@ -541,7 +541,7 @@ export default function OrderCreatePage() {
                                                 >
                                                     <option value="">Seleccionar...</option>
                                                     {products.map(p => (
-                                                        <option key={p.id} value={p.id}>{p.name} ({p.currentStock} disp.)</option>
+                                                        <option key={p.id} value={p.id}>[P-{p.id}] {p.name} ({p.currentStock} disp.)</option>
                                                     ))}
                                                 </select>
                                             </td>

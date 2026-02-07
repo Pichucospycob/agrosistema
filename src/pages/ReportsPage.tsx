@@ -89,18 +89,18 @@ export default function ReportsPage() {
         // Sum Purchases
         filteredMovements.forEach(m => {
             if (m.type === 'COMPRA') {
-                if (!prodData[m.productId]) prodData[m.productId] = { name: m.productName, bought: 0, used: 0 };
+                if (!prodData[m.productId]) prodData[m.productId] = { productId: m.productId, name: m.productName, bought: 0, used: 0 };
                 prodData[m.productId].bought += m.quantity;
             }
         });
 
         // Sum Usage (from closed orders)
         filteredConsumption.forEach(c => {
-            if (!prodData[c.productId]) prodData[c.productId] = { name: c.productName, bought: 0, used: 0 };
+            if (!prodData[c.productId]) prodData[c.productId] = { productId: c.productId, name: c.productName, bought: 0, used: 0 };
             prodData[c.productId].used += c.quantityReal || 0;
         });
 
-        return Object.values(prodData).sort((a, b) => b.bought - a.bought);
+        return Object.values(prodData).sort((a, b: any) => b.bought - a.bought);
     }, [filteredMovements, filteredConsumption]);
 
     if (loading) return <div className="p-8 text-center animate-pulse font-bold text-slate-400 uppercase tracking-widest text-xs">Generando Informes de Gestión...</div>;
@@ -218,7 +218,10 @@ export default function ReportsPage() {
                                     return (
                                         <TableRow key={idx} className="hover:bg-slate-50/50 group transition-colors">
                                             <TableCell className="py-5 px-8">
-                                                <p className="font-extrabold text-slate-900 text-xs uppercase group-hover:text-primary transition-colors">{item.name}</p>
+                                                <p className="font-extrabold text-slate-900 text-xs uppercase group-hover:text-primary transition-colors">
+                                                    {item.name || `[P-${item.productId}] PRODUCTO ELIMINADO`}
+                                                </p>
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">ID: P-{item.productId}</p>
                                             </TableCell>
                                             <TableCell className="py-5 px-6 text-right font-mono font-bold text-blue-600">
                                                 {item.bought.toLocaleString('es-AR', { minimumFractionDigits: 1 })}
@@ -252,7 +255,7 @@ export default function ReportsPage() {
                                 className="w-full bg-transparent text-sm font-bold uppercase outline-none text-slate-700 h-10 border-none px-0"
                             >
                                 <option value="">Seleccione un producto...</option>
-                                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                {products.map(p => <option key={p.id} value={p.id}>[P-{p.id}] {p.name}</option>)}
                             </select>
                         </div>
                         {selectedProductId && (
@@ -274,7 +277,7 @@ export default function ReportsPage() {
                         <Card className="border shadow-none overflow-hidden bg-white">
                             <CardHeader className="bg-slate-900 border-b py-4">
                                 <CardTitle className="text-[10px] font-black uppercase text-white tracking-widest flex items-center gap-2">
-                                    <History size={14} className="text-primary" /> Cronología de Movimientos
+                                    <History size={14} className="text-primary" /> Cronología de Movimientos {selectedProductId && `(ID: P-${selectedProductId})`}
                                 </CardTitle>
                             </CardHeader>
                             <Table>
@@ -368,7 +371,10 @@ export default function ReportsPage() {
                                                     <div className="text-[11px] font-black text-slate-900 group-hover:text-primary transition-colors">#{e.orderNumber.toString().padStart(8, '0')}</div>
                                                     <div className="text-[9px] text-slate-400 font-bold uppercase">{e.field}</div>
                                                 </TableCell>
-                                                <TableCell className="text-[11px] font-extrabold text-slate-700 uppercase">{e.productName}</TableCell>
+                                                <TableCell className="text-[11px] font-extrabold text-slate-700 uppercase">
+                                                    {e.productName || `[P-${e.productId}] PRODUCTO ELIMINADO`}
+                                                    <div className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter mt-0.5">ID: P-{e.productId}</div>
+                                                </TableCell>
                                                 <TableCell className="text-right font-mono text-[11px] text-slate-400">{e.theoretical.toLocaleString()}</TableCell>
                                                 <TableCell className="text-right font-mono text-[11px] font-black text-slate-900">{e.real.toLocaleString()}</TableCell>
                                                 <TableCell className="text-right px-8">

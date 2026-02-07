@@ -147,8 +147,12 @@ export default function RemitoEmissionPage() {
                                                         <Package className="h-4 w-4 text-slate-500" />
                                                     </div>
                                                     <div className="overflow-hidden">
-                                                        <p className="font-bold text-xs text-slate-900 truncate">{item.productName}</p>
-                                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter truncate">{item.productPresentation}</p>
+                                                        <p className="font-bold text-xs text-slate-900 truncate">
+                                                            {item.productName || `[P-${item.productId}] PRODUCTO ELIMINADO`}
+                                                        </p>
+                                                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter truncate">
+                                                            {item.productName ? item.productPresentation : `ID: P-${item.productId}`}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
