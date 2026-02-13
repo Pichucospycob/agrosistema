@@ -22,6 +22,7 @@ export default function RemitoDetailsPage() {
     const [loading, setLoading] = useState(true);
     const [showCloseConfirm, setShowCloseConfirm] = useState(false);
     const [showUndoConfirm, setShowUndoConfirm] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [cierreStep, setCierreStep] = useState(1);
     const [alertConfig, setAlertConfig] = useState<{ open: boolean, title: string, message: string }>({ open: false, title: "", message: "" });
 
@@ -42,6 +43,20 @@ export default function RemitoDetailsPage() {
             setLoading(false);
         }
     }, [id]);
+
+    const handleDeleteRemito = async () => {
+        setLoading(true);
+        try {
+            await window.db.deleteConsolidatedRemito(remito.id);
+            setShowDeleteConfirm(false);
+            navigate('/remitos');
+        } catch (error) {
+            console.error(error);
+            setAlertConfig({ open: true, title: "Error", message: "No se pudo anular el remito. Verifique que no esté cerrado." });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         loadData();
@@ -118,6 +133,11 @@ export default function RemitoDetailsPage() {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {!isDefinitive && (
+                            <Button variant="ghost" onClick={() => setShowDeleteConfirm(true)} className="text-slate-400 hover:text-red-500 font-bold border-transparent transition-colors">
+                                <RotateCcw className="mr-2 h-4 w-4" /> ANULAR REMITO
+                            </Button>
+                        )}
                         {isDefinitive && (
                             <Button variant="ghost" onClick={() => setShowUndoConfirm(true)} className="text-slate-400 hover:text-red-500 font-bold border-transparent transition-colors">
                                 <RotateCcw className="mr-2 h-4 w-4" /> ANULAR CIERRE
@@ -387,6 +407,35 @@ export default function RemitoDetailsPage() {
                         <div className="flex gap-3 pt-2">
                             <Button variant="ghost" onClick={() => setShowUndoConfirm(false)} className="flex-1 font-bold text-slate-400 uppercase h-11">Cancelar</Button>
                             <Button onClick={handleUndoClose} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold uppercase h-11 shadow-lg">Anular Cierre</Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog (Revert open remito) */}
+            <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <DialogContent className="max-w-md border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-red-600 h-1.5 w-full" />
+                    <div className="p-8 space-y-6">
+                        <div className="space-y-4 text-center">
+                            <div className="flex justify-center">
+                                <div className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center text-red-600">
+                                    <RotateCcw className="h-6 w-6" />
+                                </div>
+                            </div>
+                            <h2 className="text-xl font-bold uppercase tracking-tight text-slate-900">Anular Remito Emitido</h2>
+                            <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                                Esta action eliminará el remito y devolverá las órdenes al estado <b>Borrador</b>.
+                            </p>
+                            <ul className="text-[11px] text-slate-500 text-left space-y-1 list-disc pl-4 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
+                                <li>El stock se restaurará en el depósito automáticamente.</li>
+                                <li>Podrás volver a editar o borrar las órdenes de trabajo.</li>
+                                <li>Esta acción no se puede deshacer una vez confirmada.</li>
+                            </ul>
+                        </div>
+                        <div className="flex gap-3 pt-2">
+                            <Button variant="ghost" onClick={() => setShowDeleteConfirm(false)} className="flex-1 font-bold text-slate-400 uppercase h-11">Cancelar</Button>
+                            <Button onClick={handleDeleteRemito} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold uppercase h-11 shadow-lg">Sí, Anular Remito</Button>
                         </div>
                     </div>
                 </DialogContent>

@@ -951,6 +951,69 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
+  ipcMain.handle('delete-consolidated-remito', async (_event, remitoId) => {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const remito = await tx.select().from(schema.remitos).where(eq(schema.remitos.id, remitoId)).get();
+        if (!remito || remito.status !== 'EMITIDO') throw new Error("Remito no encontrado o ya está cerrado");
+
+        const remitoNumber = remito.remitoNumber;
+
+        // 1. Recover original Stock (Revert SALIDA_REMITO)
+        // Note: The description for creation is: `Remito Consolidado #${nextRemitoNumber}`
+        const movementsToRevert = await tx.select().from(schema.stockMovements)
+          .where(sql`${schema.stockMovements.description} LIKE ${`%Remito Consolidado #${remitoNumber}`}`);
+
+        for (const mov of movementsToRevert) {
+          const product = await tx.select().from(schema.products).where(eq(schema.products.id, mov.productId)).get();
+          if (product) {
+            // mov.quantity is negative, so we subtract it to add it back
+            await tx.update(schema.products)
+              .set({ currentStock: (product.currentStock || 0) - mov.quantity })
+              .where(eq(schema.products.id, mov.productId));
+          }
+          await tx.delete(schema.stockMovements).where(eq(schema.stockMovements.id, mov.id));
+        }
+
+        // 2. Clear OrderItems
+        const orders = await tx.select().from(schema.orders).where(eq(schema.orders.remitoId, remitoId));
+        const orderIds = orders.map(o => o.id);
+
+        if (orderIds.length > 0) {
+          // Reset quantity delivered to whatever was theoretical (or zero depends on preference, 
+          // but usually when creating remito we set delivered = theoretical as default)
+          // The user wants orders to be editable again. 
+          await tx.update(schema.orderItems)
+            .set({
+              quantityDelivered: sql`quantity_theoretical`, // Back to theoretical
+              quantityReturned: 0,
+              quantityReal: null
+            })
+            .where(sql`${schema.orderItems.orderId} IN (${sql.join(orderIds, sql`, `)})`);
+        }
+
+        // 3. Reset Orders status and clear remito links
+        await tx.update(schema.orders)
+          .set({
+            status: 'BORRADOR',
+            remitoId: null,
+            remitoNumber: null
+          })
+          .where(eq(schema.orders.remitoId, remitoId));
+
+        // 4. Delete the remito itself
+        await tx.delete(schema.remitos).where(eq(schema.remitos.id, remitoId));
+
+        return true;
+      });
+      save();
+      return result;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  });
+
   ipcMain.handle('get-efficiency-report', async () => {
     try {
       const result = await db.select({

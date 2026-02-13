@@ -40,5 +40,6 @@ interface Window {
         getProductHistory: (id: number) => Promise<any[]>
         truncateOrders: () => Promise<boolean>
         undoCloseConsolidatedRemito: (id: number) => Promise<boolean>
+        deleteConsolidatedRemito: (id: number) => Promise<boolean>
     }
 }

@@ -21004,6 +21004,45 @@ function setupIpcHandlers(db, save) {
       throw error2;
     }
   });
+  ipcMain.handle("delete-consolidated-remito", async (_event, remitoId) => {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const remito = await tx.select().from(remitos).where(eq(remitos.id, remitoId)).get();
+        if (!remito || remito.status !== "EMITIDO") throw new Error("Remito no encontrado o ya está cerrado");
+        const remitoNumber = remito.remitoNumber;
+        const movementsToRevert = await tx.select().from(stockMovements).where(sql`${stockMovements.description} LIKE ${`%Remito Consolidado #${remitoNumber}`}`);
+        for (const mov of movementsToRevert) {
+          const product = await tx.select().from(products).where(eq(products.id, mov.productId)).get();
+          if (product) {
+            await tx.update(products).set({ currentStock: (product.currentStock || 0) - mov.quantity }).where(eq(products.id, mov.productId));
+          }
+          await tx.delete(stockMovements).where(eq(stockMovements.id, mov.id));
+        }
+        const orders$1 = await tx.select().from(orders).where(eq(orders.remitoId, remitoId));
+        const orderIds = orders$1.map((o) => o.id);
+        if (orderIds.length > 0) {
+          await tx.update(orderItems).set({
+            quantityDelivered: sql`quantity_theoretical`,
+            // Back to theoretical
+            quantityReturned: 0,
+            quantityReal: null
+          }).where(sql`${orderItems.orderId} IN (${sql.join(orderIds, sql`, `)})`);
+        }
+        await tx.update(orders).set({
+          status: "BORRADOR",
+          remitoId: null,
+          remitoNumber: null
+        }).where(eq(orders.remitoId, remitoId));
+        await tx.delete(remitos).where(eq(remitos.id, remitoId));
+        return true;
+      });
+      save();
+      return result;
+    } catch (error2) {
+      console.error(error2);
+      throw error2;
+    }
+  });
   ipcMain.handle("get-efficiency-report", async () => {
     try {
       const result = await db.select({
