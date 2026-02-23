@@ -20,6 +20,7 @@ export default function OrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [showContractorWarning, setShowContractorWarning] = (useState as any)(false);
+    const [orderToAnular, setOrderToAnular] = useState<any>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -143,7 +144,12 @@ export default function OrdersPage() {
                                         ) : null}
                                     </TableCell>
                                     <TableCell className="font-bold text-slate-900 py-4 px-6">
-                                        <span className="text-primary tracking-tighter">#{order.orderNumber.toString().padStart(8, '0')}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-primary tracking-tighter">#{order.orderNumber.toString().padStart(8, '0')}</span>
+                                            {order.manualOrderNumber && (
+                                                <span className="text-[9px] text-slate-400 font-bold uppercase">M: {order.manualOrderNumber}</span>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-sm text-slate-600 font-medium">
                                         {order.date ? format(new Date(order.date), 'dd/MM/yy') : '-'}
@@ -184,6 +190,20 @@ export default function OrdersPage() {
                                         >
                                             <Eye className="h-3.5 w-3.5 mr-1.5" /> VER DETALLES
                                         </Button>
+
+                                        {order.status === 'BORRADOR' && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={async () => {
+                                                    setOrderToAnular(order);
+                                                }}
+                                                className="h-8 rounded-md border-red-100 text-red-500 hover:bg-red-50 hover:border-red-200 font-bold text-[11px] transition-all px-2"
+                                                title="Anular Orden"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -216,6 +236,39 @@ export default function OrdersPage() {
                                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 shadow-md h-10"
                             >
                                 CONTINUAR
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!orderToAnular} onOpenChange={(val) => !val && setOrderToAnular(null)}>
+                <DialogContent className="max-w-md border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-red-600 h-1.5 w-full" />
+                    <div className="p-6 space-y-4">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold text-slate-900 uppercase tracking-tight">Anular Orden de Trabajo</DialogTitle>
+                            <DialogDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+                                ¿Estás seguro de que deseas **ANULAR** la Orden #{orderToAnular?.orderNumber.toString().padStart(8, '0')}?
+                                <br /><br />
+                                Esta acción cambiará el estado a **ANULADA** y no se podrá revertir.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0 sm:justify-between pt-2">
+                            <Button variant="ghost" onClick={() => setOrderToAnular(null)} className="text-slate-500 font-bold text-[11px] uppercase tracking-widest">
+                                CANCELAR
+                            </Button>
+                            <Button
+                                onClick={async () => {
+                                    if (orderToAnular) {
+                                        await window.db.anularOrder(orderToAnular.id);
+                                        setOrderToAnular(null);
+                                        loadOrders();
+                                    }
+                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 shadow-md h-10"
+                            >
+                                CONFIRMAR ANULACIÓN
                             </Button>
                         </DialogFooter>
                     </div>

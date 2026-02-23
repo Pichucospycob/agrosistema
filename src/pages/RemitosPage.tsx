@@ -11,10 +11,6 @@ export default function RemitosPage() {
     const [remitos, setRemitos] = useState<any[]>([]);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        loadRemitos();
-    }, []);
-
     async function loadRemitos() {
         try {
             const data = await window.db.getRemitos();
@@ -23,6 +19,10 @@ export default function RemitosPage() {
             console.error(error);
         }
     }
+
+    useEffect(() => {
+        loadRemitos();
+    }, []);
 
     return (
         <div className="space-y-6">
@@ -63,7 +63,12 @@ export default function RemitosPage() {
                                     <TableCell className="font-bold text-slate-900 py-4 px-6">
                                         <div className="flex items-center gap-2">
                                             <div className="h-2 w-2 rounded-full bg-blue-500" />
-                                            <span className="text-primary tracking-tighter font-mono">R-{remito.remitoNumber.toString().padStart(8, '0')}</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-primary tracking-tighter font-mono">R-{remito.remitoNumber.toString().padStart(8, '0')}</span>
+                                                {remito.manualRemitoNumber && (
+                                                    <span className="text-[9px] text-slate-400 font-bold uppercase">M: {remito.manualRemitoNumber}</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-sm text-slate-600 font-medium">

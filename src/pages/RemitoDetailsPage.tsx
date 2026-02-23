@@ -122,6 +122,11 @@ export default function RemitoDetailsPage() {
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
                                 REMITO CONSOLIDADO <span className="font-mono text-primary">R-{remito.remitoNumber.toString().padStart(8, '0')}</span>
+                                {remito.manualRemitoNumber && (
+                                    <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded border border-slate-200 font-bold">
+                                        MANUAL: {remito.manualRemitoNumber}
+                                    </span>
+                                )}
                                 <span className={cn(
                                     "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest border",
                                     isDefinitive ? "bg-green-100 text-green-700 border-green-200" : "bg-blue-100 text-blue-700 border-blue-200"

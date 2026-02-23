@@ -51,6 +51,7 @@ electron.contextBridge.exposeInMainWorld("db", {
   getCampaignCostReport: () => electron.ipcRenderer.invoke("get-campaign-cost-report"),
   undoCloseConsolidatedRemito: (id) => electron.ipcRenderer.invoke("undo-close-consolidated-remito", id),
   deleteConsolidatedRemito: (id) => electron.ipcRenderer.invoke("delete-consolidated-remito", id),
+  anularOrder: (id) => electron.ipcRenderer.invoke("anular-order", id),
   // Supplier Remitos
   getSupplierRemitos: () => electron.ipcRenderer.invoke("get-supplier-remitos"),
   createSupplierRemito: (data) => electron.ipcRenderer.invoke("create-supplier-remito", data),

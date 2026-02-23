@@ -23,6 +23,7 @@ export const lots = sqliteTable('lots', {
 export const remitos = sqliteTable('remitos', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     remitoNumber: integer('remito_number').notNull(),
+    manualRemitoNumber: text('manual_remito_number'), // Campo opcional para numeración anterior/manual
     date: text('date').notNull(),
     contractor: text('contractor'),
     observations: text('observations'),
@@ -34,6 +35,7 @@ export const remitos = sqliteTable('remitos', {
 export const orders = sqliteTable('orders', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     orderNumber: integer('order_number').notNull(), // Visible al usuario (ej: 604)
+    manualOrderNumber: text('manual_order_number'), // Campo opcional para numeración anterior/manual
     remitoNumber: integer('remito_number'), // Numero de remito correlativo (LEGACY/VINCULADO)
     remitoId: integer('remito_id').references(() => remitos.id),
     date: text('date').notNull(), // Fecha emisión

@@ -3,11 +3,18 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-// import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { ArrowLeft, Printer, FileText, Pencil, Droplets, Wind, MapPin } from "lucide-react";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function OrderDetailsPage() {
     const { id } = useParams();
@@ -15,6 +22,7 @@ export default function OrderDetailsPage() {
     const [order, setOrder] = useState<any>(null);
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showAnularConfirm, setShowAnularConfirm] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Initial Load
@@ -25,8 +33,8 @@ export default function OrderDetailsPage() {
             const { items: fetchedItems, lots: fetchedLots, ...orderData } = data;
             setOrder({ ...orderData, lots: fetchedLots });
             setItems(fetchedItems || []);
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            console.error(error);
             setError("Error cargando la orden.");
         } finally {
             setLoading(false);
@@ -46,7 +54,7 @@ export default function OrderDetailsPage() {
             // The date is YYYY-MM-DD from the DB
             const [y, m, d] = dateStr.split('-').map(Number);
             return format(new Date(y, m - 1, d), 'dd/MM/yyyy');
-        } catch (e) {
+        } catch {
             return dateStr;
         }
     };
@@ -55,6 +63,7 @@ export default function OrderDetailsPage() {
         'BORRADOR': 'bg-slate-100 text-slate-600 border-slate-200',
         'EMITIDA': 'bg-blue-50 text-blue-700 border-blue-200',
         'CERRADA': 'bg-green-50 text-green-700 border-green-200',
+        'ANULADA': 'bg-red-50 text-red-700 border-red-200',
     };
 
     const formatQty = (num: number) => {
@@ -75,8 +84,13 @@ export default function OrderDetailsPage() {
                     </Button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-900 border-r pr-4">
+                            <h1 className="text-2xl font-bold tracking-tight text-slate-900 border-r pr-4 flex items-center gap-3">
                                 {order.orderNumber ? `OT #${order.orderNumber.toString().padStart(6, '0')}` : 'Borrador'}
+                                {order.manualOrderNumber && (
+                                    <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded border border-slate-200 font-bold ml-2">
+                                        M: {order.manualOrderNumber}
+                                    </span>
+                                )}
                             </h1>
                             <span className={cn(
                                 "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
@@ -92,9 +106,21 @@ export default function OrderDetailsPage() {
                 </div>
                 <div className="flex gap-2">
                     {order.status === 'BORRADOR' && (
-                        <Button variant="outline" onClick={() => navigate(`/ordenes/editar/${order.id}`)} className="border-slate-300 hover:bg-slate-100 font-bold text-xs uppercase">
-                            <Pencil className="mr-2 h-3.5 w-3.5" /> Editar Orden
-                        </Button>
+                        <>
+                            <Button variant="outline" onClick={() => navigate(`/ordenes/editar/${order.id}`)} className="border-slate-300 hover:bg-slate-100 font-bold text-xs uppercase">
+                                <Pencil className="mr-2 h-3.5 w-3.5" /> Editar Orden
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={async () => {
+                                    setShowAnularConfirm(true);
+                                }}
+                                className="border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 font-bold text-xs uppercase"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                                Anular Orden
+                            </Button>
+                        </>
                     )}
                     <Button onClick={async () => await generateWorkOrderPDF(order, items)} className="bg-primary hover:bg-primary/90 text-white font-bold text-xs uppercase shadow-sm">
                         <Printer className="mr-2 h-3.5 w-3.5" /> Imprimir OT
@@ -265,6 +291,37 @@ export default function OrderDetailsPage() {
                     </Card>
                 </div>
             </div>
+
+            <Dialog open={showAnularConfirm} onOpenChange={setShowAnularConfirm}>
+                <DialogContent className="max-w-md border shadow-2xl bg-white p-0 overflow-hidden">
+                    <div className="bg-red-600 h-1.5 w-full" />
+                    <div className="p-6 space-y-4">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold text-slate-900 uppercase tracking-tight">Anular Orden de Trabajo</DialogTitle>
+                            <DialogDescription className="text-sm font-medium text-slate-500 leading-relaxed">
+                                ¿Estás seguro de que deseas **ANULAR** la Orden #{order?.orderNumber.toString().padStart(6, '0')}?
+                                <br /><br />
+                                Esta acción cambiará el estado a **ANULADA** y no se podrá revertir.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0 sm:justify-between pt-2">
+                            <Button variant="ghost" onClick={() => setShowAnularConfirm(false)} className="text-slate-500 font-bold text-[11px] uppercase tracking-widest">
+                                CANCELAR
+                            </Button>
+                            <Button
+                                onClick={async () => {
+                                    await window.db.anularOrder(order.id);
+                                    setShowAnularConfirm(false);
+                                    loadOrder();
+                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 shadow-md h-10"
+                            >
+                                CONFIRMAR ANULACIÓN
+                            </Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

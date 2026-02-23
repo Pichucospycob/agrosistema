@@ -20009,6 +20009,8 @@ const lots = sqliteTable("lots", {
 const remitos = sqliteTable("remitos", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   remitoNumber: integer("remito_number").notNull(),
+  manualRemitoNumber: text("manual_remito_number"),
+  // Campo opcional para numeración anterior/manual
   date: text("date").notNull(),
   contractor: text("contractor"),
   observations: text("observations"),
@@ -20020,6 +20022,8 @@ const orders = sqliteTable("orders", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   orderNumber: integer("order_number").notNull(),
   // Visible al usuario (ej: 604)
+  manualOrderNumber: text("manual_order_number"),
+  // Campo opcional para numeración anterior/manual
   remitoNumber: integer("remito_number"),
   // Numero de remito correlativo (LEGACY/VINCULADO)
   remitoId: integer("remito_id").references(() => remitos.id),
@@ -20236,6 +20240,7 @@ function runMigrations() {
       }
       return false;
     };
+    if (!checkColumn("order_items", "quantity_theoretical")) sqlDbInstance.run("ALTER TABLE order_items ADD COLUMN quantity_theoretical real DEFAULT 0");
     if (!checkColumn("orders", "field")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN field text");
     if (!checkColumn("orders", "implanted")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN implanted integer");
     if (!checkColumn("orders", "total_surface")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN total_surface real");
@@ -20243,10 +20248,12 @@ function runMigrations() {
     if (!checkColumn("orders", "instructions")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN instructions text");
     if (!checkColumn("orders", "pressure_unit")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN pressure_unit text");
     if (!checkColumn("orders", "remito_number")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN remito_number integer");
+    if (!checkColumn("orders", "manual_order_number")) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN manual_order_number text");
     sqlDbInstance.run(`
             CREATE TABLE IF NOT EXISTS remitos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 remito_number INTEGER NOT NULL,
+                manual_remito_number TEXT,
                 date TEXT NOT NULL,
                 contractor TEXT,
                 observations TEXT,
@@ -20254,6 +20261,9 @@ function runMigrations() {
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         `);
+    if (!checkColumn("remitos", "manual_remito_number")) {
+      sqlDbInstance.run("ALTER TABLE remitos ADD COLUMN manual_remito_number TEXT");
+    }
     if (!checkColumn("orders", "remito_id")) {
       sqlDbInstance.run("ALTER TABLE orders ADD COLUMN remito_id INTEGER REFERENCES remitos(id)");
     }
@@ -20509,6 +20519,7 @@ function setupIpcHandlers(db, save) {
         const nextOrderNumber = (lastOrder?.orderNumber || 0) + 1;
         const [newOrder] = await tx.insert(orders).values({
           orderNumber: nextOrderNumber,
+          manualOrderNumber: orderData.manualOrderNumber,
           date: orderData.date,
           campaign: orderData.campaign,
           contractor: orderData.contractor,
@@ -20560,6 +20571,7 @@ function setupIpcHandlers(db, save) {
     try {
       const result = await db.transaction(async (tx) => {
         const [updatedOrder] = await tx.update(orders).set({
+          manualOrderNumber: orderData.manualOrderNumber,
           date: orderData.date,
           campaign: orderData.campaign,
           contractor: orderData.contractor,
@@ -20803,13 +20815,14 @@ function setupIpcHandlers(db, save) {
       throw error2;
     }
   });
-  ipcMain.handle("create-consolidated-remito", async (_event, { orderIds, date, contractor, observations, deliveredItems }) => {
+  ipcMain.handle("create-consolidated-remito", async (_event, { orderIds, date, contractor, observations, deliveredItems, manualRemitoNumber }) => {
     try {
       const result = await db.transaction(async (tx) => {
         const lastRemito = await tx.select().from(remitos).orderBy(sql`${remitos.remitoNumber} DESC`).limit(1).get();
         const nextRemitoNumber = (lastRemito?.remitoNumber || 0) + 1;
         const [newRemito] = await tx.insert(remitos).values({
           remitoNumber: nextRemitoNumber,
+          manualRemitoNumber,
           date,
           contractor,
           observations,
@@ -21086,6 +21099,22 @@ function setupIpcHandlers(db, save) {
       return true;
     } catch (error2) {
       console.error("Error truncating orders:", error2);
+      throw error2;
+    }
+  });
+  ipcMain.handle("anular-order", async (_event, orderId) => {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const order = await tx.select().from(orders).where(eq(orders.id, orderId)).get();
+        if (!order) throw new Error("Orden no encontrada");
+        if (order.status !== "BORRADOR") throw new Error("Solo se pueden anular órdenes en estado BORRADOR");
+        await tx.update(orders).set({ status: "ANULADA" }).where(eq(orders.id, orderId));
+        return true;
+      });
+      save();
+      return result;
+    } catch (error2) {
+      console.error("Error anulando orden:", error2);
       throw error2;
     }
   });

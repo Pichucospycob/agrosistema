@@ -19,6 +19,7 @@ export default function OrderCreatePage() {
     // Form State
     const [formData, setFormData] = useState({
         date: new Date().toLocaleDateString('en-CA'), // Returns YYYY-MM-DD in local time
+        manualOrderNumber: "",
         campaign: "2025/2026",
         contractor: "",
         field: "",
@@ -54,6 +55,7 @@ export default function OrderCreatePage() {
                     const { items: fetchedItems, lots: fetchedLots, ...orderData } = data;
                     setFormData({
                         date: orderData.date,
+                        manualOrderNumber: orderData.manualOrderNumber || "",
                         campaign: orderData.campaign,
                         contractor: orderData.contractor,
                         field: orderData.field || "",
@@ -302,6 +304,10 @@ export default function OrderCreatePage() {
                                 <div className="space-y-1.5">
                                     <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Fecha de Emisión</Label>
                                     <Input type="date" value={formData.date} onChange={e => handleUpdateField('date', e.target.value)} className="h-10 border-slate-200" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Nro Orden Manual / Anterior</Label>
+                                    <Input placeholder="Ej: 001-00001" value={formData.manualOrderNumber} onChange={e => handleUpdateField('manualOrderNumber', e.target.value)} className="h-10 border-slate-200" />
                                 </div>
                                 <div className="space-y-1.5">
                                     <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Campaña</Label>

@@ -277,6 +277,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
 
         const [newOrder] = await tx.insert(schema.orders).values({
           orderNumber: nextOrderNumber,
+          manualOrderNumber: orderData.manualOrderNumber,
           date: orderData.date,
           campaign: orderData.campaign,
           contractor: orderData.contractor,
@@ -334,6 +335,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
         // 1. Update main order data
         const [updatedOrder] = await tx.update(schema.orders)
           .set({
+            manualOrderNumber: orderData.manualOrderNumber,
             date: orderData.date,
             campaign: orderData.campaign,
             contractor: orderData.contractor,
@@ -662,7 +664,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
     }
   });
 
-  ipcMain.handle('create-consolidated-remito', async (_event, { orderIds, date, contractor, observations, deliveredItems }) => {
+  ipcMain.handle('create-consolidated-remito', async (_event, { orderIds, date, contractor, observations, deliveredItems, manualRemitoNumber }) => {
     // deliveredItems: { productId: number, quantityDelivered: number }[]
     try {
       const result = await db.transaction(async (tx) => {
@@ -673,6 +675,7 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
         // 2. Create entry in remitos
         const [newRemito] = await tx.insert(schema.remitos).values({
           remitoNumber: nextRemitoNumber,
+          manualRemitoNumber: manualRemitoNumber,
           date,
           contractor,
           observations,
@@ -1071,6 +1074,27 @@ function setupIpcHandlers(db: AppDatabase, save: () => void) {
       return true;
     } catch (error) {
       console.error("Error truncating orders:", error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('anular-order', async (_event, orderId) => {
+    try {
+      const result = await db.transaction(async (tx) => {
+        const order = await tx.select().from(schema.orders).where(eq(schema.orders.id, orderId)).get();
+        if (!order) throw new Error("Orden no encontrada");
+        if (order.status !== 'BORRADOR') throw new Error("Solo se pueden anular órdenes en estado BORRADOR");
+
+        await tx.update(schema.orders)
+          .set({ status: 'ANULADA' })
+          .where(eq(schema.orders.id, orderId));
+
+        return true;
+      });
+      save();
+      return result;
+    } catch (error) {
+      console.error("Error anulando orden:", error);
       throw error;
     }
   });

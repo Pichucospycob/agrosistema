@@ -129,6 +129,7 @@ export function runMigrations() {
             return false;
         };
 
+        if (!checkColumn('order_items', 'quantity_theoretical')) sqlDbInstance.run("ALTER TABLE order_items ADD COLUMN quantity_theoretical real DEFAULT 0");
         if (!checkColumn('orders', 'field')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN field text");
         if (!checkColumn('orders', 'implanted')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN implanted integer");
         if (!checkColumn('orders', 'total_surface')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN total_surface real");
@@ -136,12 +137,14 @@ export function runMigrations() {
         if (!checkColumn('orders', 'instructions')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN instructions text");
         if (!checkColumn('orders', 'pressure_unit')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN pressure_unit text");
         if (!checkColumn('orders', 'remito_number')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN remito_number integer");
+        if (!checkColumn('orders', 'manual_order_number')) sqlDbInstance.run("ALTER TABLE orders ADD COLUMN manual_order_number text");
 
         // --- New Remitos Migrations ---
         sqlDbInstance.run(`
             CREATE TABLE IF NOT EXISTS remitos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 remito_number INTEGER NOT NULL,
+                manual_remito_number TEXT,
                 date TEXT NOT NULL,
                 contractor TEXT,
                 observations TEXT,
@@ -149,6 +152,10 @@ export function runMigrations() {
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        if (!checkColumn('remitos', 'manual_remito_number')) {
+            sqlDbInstance.run("ALTER TABLE remitos ADD COLUMN manual_remito_number TEXT");
+        }
 
         if (!checkColumn('orders', 'remito_id')) {
             sqlDbInstance.run("ALTER TABLE orders ADD COLUMN remito_id INTEGER REFERENCES remitos(id)");

@@ -1,6 +1,37 @@
-/// <reference types="vite/client" />
-/// <reference types="vite-plugin-electron/electron-env" />
-/// <reference types="vite-plugin-electron-renderer/client" />
+// --- Tipos de Datos ---
+interface Order {
+    id: number;
+    orderNumber: number;
+    manualOrderNumber?: string;
+    date: string;
+    campaign: string;
+    contractor: string;
+    field: string;
+    crop: string;
+    labor: string;
+    implanted: boolean;
+    totalSurface: number;
+    status: 'BORRADOR' | 'EMITIDA' | 'CERRADA' | 'ANULADA';
+    nozzleType?: string;
+    nozzleDescription?: string;
+    waterPerHa?: number;
+    pressure?: number;
+    pressureUnit?: string;
+    windSpeed?: number;
+    humidity?: number;
+    instructions?: string;
+    observations?: string;
+}
+
+interface Remito {
+    id: number;
+    remitoNumber: number;
+    manualRemitoNumber?: string;
+    date: string;
+    contractor: string;
+    observations: string;
+    status: 'EMITIDO' | 'CERRADO' | 'ANULADO';
+}
 
 interface Window {
     ipcRenderer: import('electron').IpcRenderer
@@ -41,5 +72,6 @@ interface Window {
         truncateOrders: () => Promise<boolean>
         undoCloseConsolidatedRemito: (id: number) => Promise<boolean>
         deleteConsolidatedRemito: (id: number) => Promise<boolean>
+        anularOrder: (id: number) => Promise<boolean>
     }
 }

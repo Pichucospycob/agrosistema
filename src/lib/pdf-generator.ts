@@ -59,8 +59,16 @@ export const generateWorkOrderPDF = async (order: any, items: any[]) => {
 
     doc.setFontSize(10);
     doc.text(`N° Orden: ${orderNumStr}`, 150, 30);
-    doc.text(`Fecha: ${format(new Date(order.date), 'dd/MM/yyyy')}`, 150, 35);
-    doc.text(`Campaña: ${order.campaign}`, 150, 40);
+    if (order.manualOrderNumber) {
+        doc.setFontSize(8);
+        doc.text(`N° Manual: ${order.manualOrderNumber}`, 150, 34);
+        doc.setFontSize(10);
+        doc.text(`Fecha: ${format(new Date(order.date), 'dd/MM/yyyy')}`, 150, 39);
+        doc.text(`Campaña: ${order.campaign}`, 150, 44);
+    } else {
+        doc.text(`Fecha: ${format(new Date(order.date), 'dd/MM/yyyy')}`, 150, 35);
+        doc.text(`Campaña: ${order.campaign}`, 150, 40);
+    }
 
     doc.setFontSize(12);
     doc.text("AGROSISTEMA", 15, 34);
@@ -182,8 +190,16 @@ export const generateRemitoPDF = async (order: any, items: any[]) => {
 
     doc.setFontSize(10);
     doc.text(`N° Remito: ${remitoNumStr}`, 150, 25);
-    doc.text(`N° Orden Vinc.: ${orderNumStr}`, 150, 30);
-    doc.text(`Fecha Emisión: ${format(new Date(), 'dd/MM/yyyy')}`, 150, 35);
+    if (order.manualRemitoNumber) {
+        doc.setFontSize(8);
+        doc.text(`Manual: ${order.manualRemitoNumber}`, 150, 29);
+        doc.setFontSize(10);
+        doc.text(`N° Orden Vinc.: ${orderNumStr}`, 150, 34);
+        doc.text(`Fecha Emisión: ${format(new Date(), 'dd/MM/yyyy')}`, 150, 39);
+    } else {
+        doc.text(`N° Orden Vinc.: ${orderNumStr}`, 150, 30);
+        doc.text(`Fecha Emisión: ${format(new Date(), 'dd/MM/yyyy')}`, 150, 35);
+    }
 
     doc.setFontSize(12);
     doc.text("AGROSISTEMA", 15, 34);
@@ -256,8 +272,16 @@ export const generateConsolidatedRemitoPDF = async (remito: any, items: any[]) =
 
     doc.setFontSize(10);
     doc.text(`N° Remito: ${remitoNumStr}`, 150, 25);
-    doc.text(`Fecha Emisión: ${format(new Date(remito.date), 'dd/MM/yyyy')}`, 150, 30);
-    doc.text("CONSOLIDADO", 150, 35);
+    if (remito.manualRemitoNumber) {
+        doc.setFontSize(8);
+        doc.text(`Manual: ${remito.manualRemitoNumber}`, 150, 29);
+        doc.setFontSize(10);
+        doc.text(`Fecha Emisión: ${format(new Date(remito.date), 'dd/MM/yyyy')}`, 150, 34);
+        doc.text("CONSOLIDADO", 150, 39);
+    } else {
+        doc.text(`Fecha Emisión: ${format(new Date(remito.date), 'dd/MM/yyyy')}`, 150, 30);
+        doc.text("CONSOLIDADO", 150, 35);
+    }
 
     doc.setFontSize(12);
     doc.text("AGROSISTEMA", 15, 34);

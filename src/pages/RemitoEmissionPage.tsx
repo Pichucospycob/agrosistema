@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,10 +18,11 @@ import {
 export default function RemitoEmissionPage() {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const orderIds = searchParams.get('ids')?.split(',').map(Number) || [];
+    const orderIds = useMemo(() => searchParams.get('ids')?.split(',').map(Number) || [], [searchParams]);
     const [items, setItems] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [contractor, setContractor] = useState("");
+    const [manualRemitoNumber, setManualRemitoNumber] = useState("");
     const [showZeroAlert, setShowZeroAlert] = useState(false);
     const [alertConfig, setAlertConfig] = useState<{ open: boolean, title: string, message: string }>({ open: false, title: "", message: "" });
 
@@ -42,7 +43,7 @@ export default function RemitoEmissionPage() {
         } finally {
             setLoading(false);
         }
-    }, [orderIds.join(',')]);
+    }, [orderIds]);
 
     useEffect(() => {
         if (orderIds.length === 0) {
@@ -75,6 +76,7 @@ export default function RemitoEmissionPage() {
                 orderIds,
                 date: new Date().toISOString(),
                 contractor,
+                manualRemitoNumber,
                 observations: `Salida consolidada de ${orderIds.length} órdenes.`,
                 deliveredItems: deliveredItems as any[]
             });
@@ -114,6 +116,15 @@ export default function RemitoEmissionPage() {
                                         onChange={(e) => setContractor(e.target.value)}
                                         className="bg-white border-blue-200 h-10 font-bold uppercase text-xs"
                                         placeholder="EJ: GATTI FACUNDO / PEPE CUENCA"
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Nro Remito Manual / Anterior</label>
+                                    <Input
+                                        value={manualRemitoNumber}
+                                        onChange={(e) => setManualRemitoNumber(e.target.value)}
+                                        className="bg-white border-blue-200 h-10 font-bold uppercase text-xs"
+                                        placeholder="EJ: 0001-00000123"
                                     />
                                 </div>
                                 <div className="flex items-start gap-2 p-3 bg-white rounded-lg border border-blue-100/50 text-[11px] text-blue-700 leading-relaxed font-medium">
